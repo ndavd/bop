@@ -1,0 +1,27 @@
+[package]
+name = "bop"
+version = "0.1.0"
+edition = "2021"
+authors = ["Nuno David <email@ndavd.com>"]
+license = "MIT"
+description = "Encrypted multichain crypto portfolio tracker"
+readme = ".github/README.md"
+repository = "https://github.com/ndavd/bop"
+
+[dependencies]
+age = { version = "0.11.1", features = ["cli-common"] }
+rustyline = "14.0.0"
+reqwest = { version = "0.12.9", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+futures = "0.3.31"
+num-bigint = "0.4.6"
+num-traits = "0.2.19"
+serde_json = "1.0.133"
+serde = { version = "1.0.215", features = ["derive"] }
+serde-query = "0.2.0"
+tonlib-core = "0.22.4"
+base58 = "0.2.0"
+curve25519-dalek = "4.1.3"
+sha3 = "0.10.8"
+pinentry = "0.6.0"
+dirs = "5.0.1"
