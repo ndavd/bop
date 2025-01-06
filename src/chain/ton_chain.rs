@@ -50,8 +50,6 @@ struct TonGetAccountJettonsBalancesResponse {
 
 #[derive(Deserialize, Debug, Clone)]
 struct JettonMetadata {
-    address: String,
-    symbol: String,
     decimals: String,
 }
 
@@ -61,12 +59,6 @@ struct TonGetJettonInfo {
 }
 
 impl TonChain {
-    pub fn new(properties: ChainProperties) -> Self {
-        Self {
-            properties,
-            http_client: Client::new(),
-        }
-    }
     fn parse_address_to_base64(address: &str, is_token: bool) -> Option<String> {
         TonAddress::from_base64_url(address)
             .ok()
