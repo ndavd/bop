@@ -4,7 +4,7 @@ on:
     tags:
       - '*'
 env:
-  binary: bop
+  binary: book-of-profits
 jobs:
   # Publish on crates.io
   publish-to-crates:

@@ -17,7 +17,6 @@ use crate::{
 
 static DATA_FILE: &str = ".bop-data";
 static BOOK_OF_PROFITS: &str = "Book of Profits";
-static BOOK_OF_PROFITS_SHORT: &str = "BoP";
 
 static CHAIN_TYPES: &[ChainType; 3] = &[ChainType::Evm, ChainType::Solana, ChainType::Ton];
 
@@ -207,7 +206,7 @@ config - Export BoP config in plain text
             0 => {
                 let available_chain_types = format!(
                     "{} currently supports the following chain-types: {}, {}, {}",
-                    BOOK_OF_PROFITS_SHORT.to_colored(),
+                    BOOK_OF_PROFITS.to_colored(),
                     ChainType::Evm.to_string().as_str().to_colored(),
                     ChainType::Solana.to_string().as_str().to_colored(),
                     ChainType::Ton.to_string().as_str().to_colored()
