@@ -31,12 +31,12 @@ impl Token {
             decimals,
         }
     }
-    pub async fn new(address: String, chain: &Chain) -> SupportOption<Self> {
+    pub async fn new(address: String, chain: &Chain) -> Option<Self> {
         let decimals = chain.get_token_decimals(address.clone()).await?;
         let symbol = chain.get_token_symbol(address.clone()).await?;
-        SupportOption::SupportedSome(Self {
+        Some(Self {
             symbol,
-            address: chain.parse_token_address(&address).to_supported()?,
+            address: chain.parse_token_address(&address)?,
             decimals,
         })
     }
@@ -147,21 +147,21 @@ impl Chain {
     }
 }
 
+// TODO: Refactor, `SupportOption` enum was a mistake; solution: add flags to each chain-type and return
+// None in the unsupported methods
 pub trait ChainOps {
-    async fn get_native_token_balance(&self, address: String) -> Option<BigUint>;
-    async fn get_token_balance(&self, token: &Token, address: String) -> SupportOption<BigUint>;
-    async fn get_holdings_balance(&self, address: String) -> SupportOption<Vec<(String, BigUint)>>;
-    async fn get_token_decimals(&self, token_address: String) -> SupportOption<usize>;
-    async fn get_token_symbol(&self, token_address: String) -> SupportOption<String> {
-        let pairs = dexscreener::get_pairs(vec![token_address])
-            .await
-            .to_supported()?;
-        SupportOption::SupportedSome(
-            (pairs.len() != 0)
-                .then(|| pairs[0].base_token.symbol.clone())
-                .to_supported()?,
-        )
+    async fn get_native_token_balance(&self, address: String) -> (Option<BigUint>, Option<f32>);
+    async fn get_token_balance(
+        &self,
+        token: &Token,
+        address: String,
+    ) -> (Option<BigUint>, Option<f32>);
+    async fn get_token_decimals(&self, token_address: String) -> Option<usize>;
+    async fn get_token_symbol(&self, token_address: String) -> Option<String> {
+        let pairs = dexscreener::get_pairs(vec![token_address]).await?;
+        (pairs.len() != 0).then(|| pairs[0].base_token.symbol.clone())
     }
+    async fn get_holdings_balance(&self, address: String) -> SupportOption<Vec<(String, BigUint)>>;
     async fn scan_for_tokens(&self, address: String) -> SupportOption<Vec<Token>>;
     fn parse_wallet_address(&self, address: &str) -> Option<String>;
     fn parse_token_address(&self, address: &str) -> Option<String> {
@@ -170,14 +170,18 @@ pub trait ChainOps {
 }
 
 impl ChainOps for Chain {
-    async fn get_native_token_balance(&self, address: String) -> Option<BigUint> {
+    async fn get_native_token_balance(&self, address: String) -> (Option<BigUint>, Option<f32>) {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).get_native_token_balance(address).await,
             ChainType::Solana => SolChain::from(self).get_native_token_balance(address).await,
             ChainType::Ton => TonChain::from(self).get_native_token_balance(address).await,
         }
     }
-    async fn get_token_balance(&self, token: &Token, address: String) -> SupportOption<BigUint> {
+    async fn get_token_balance(
+        &self,
+        token: &Token,
+        address: String,
+    ) -> (Option<BigUint>, Option<f32>) {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).get_token_balance(token, address).await,
             ChainType::Solana => SolChain::from(self).get_token_balance(token, address).await,
@@ -191,14 +195,14 @@ impl ChainOps for Chain {
             ChainType::Ton => TonChain::from(self).get_holdings_balance(address).await,
         }
     }
-    async fn get_token_decimals(&self, token_address: String) -> SupportOption<usize> {
+    async fn get_token_decimals(&self, token_address: String) -> Option<usize> {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).get_token_decimals(token_address).await,
             ChainType::Solana => SolChain::from(self).get_token_decimals(token_address).await,
             ChainType::Ton => TonChain::from(self).get_token_decimals(token_address).await,
         }
     }
-    async fn get_token_symbol(&self, token_address: String) -> SupportOption<String> {
+    async fn get_token_symbol(&self, token_address: String) -> Option<String> {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).get_token_symbol(token_address).await,
             ChainType::Solana => SolChain::from(self).get_token_symbol(token_address).await,

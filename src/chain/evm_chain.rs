@@ -1,13 +1,10 @@
-use std::time::Duration;
-
-use reqwest::{Response, StatusCode};
+use reqwest::StatusCode;
 use sha3::{Digest, Keccak256};
 
 use num_bigint::BigUint;
 use num_traits::ToPrimitive;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use tokio::time::sleep;
 
 use crate::chain::*;
 
@@ -31,45 +28,58 @@ impl From<&Chain> for EvmChain {
 }
 
 impl EvmChain {
-    async fn rpc_call(&self, method: &str, params: Value) -> Option<String> {
+    async fn rpc_call(&self, method: &str, params: Value) -> (Option<String>, Option<f32>) {
         let payload = json!({
             "jsonrpc": "2.0",
             "id": "1",
             "method": method,
             "params": params,
         });
-        let mut response: Response;
-        loop {
-            response = self
-                .http_client
-                .post(self.properties.rpc_url.clone())
-                .json(&payload)
-                .send()
-                .await
-                .ok()?;
-            let status = response.status();
-            if status != StatusCode::TOO_MANY_REQUESTS {
-                break;
-            }
-            eprintln!("evm {status}");
-            if let Some(retry_after) = response.headers().get("Retry-After") {
-                let seconds: u64 = retry_after.to_str().unwrap_or("0").parse().unwrap_or(0);
-                eprintln!("Retrying after {}...", seconds);
-                sleep(Duration::from_secs_f32(seconds as f32 * 1.5)).await;
-            }
+        let response = match self
+            .http_client
+            .post(self.properties.rpc_url.clone())
+            .json(&payload)
+            .send()
+            .await
+            .ok()
+        {
+            Some(x) => x,
+            None => return (None, None),
+        };
+        let mut seconds = None;
+        if response.status() == StatusCode::TOO_MANY_REQUESTS {
+            seconds = response
+                .headers()
+                .get("retry-after")
+                .and_then(|x| x.to_str().ok())
+                .and_then(|x| x.parse().ok());
         }
-        Some(response.json::<EthCallResponse>().await.ok()?.result)
+        (
+            response
+                .json::<EthCallResponse>()
+                .await
+                .ok()
+                .and_then(|x| Some(x.result)),
+            seconds,
+        )
     }
 }
 
 impl ChainOps for EvmChain {
-    async fn get_native_token_balance(&self, address: String) -> Option<BigUint> {
-        let balance_hex = self
+    async fn get_native_token_balance(&self, address: String) -> (Option<BigUint>, Option<f32>) {
+        let (balance_hex, wait_time) = self
             .rpc_call("eth_getBalance", json!([address, "latest"]))
-            .await?;
-        BigUint::parse_bytes(&balance_hex.as_bytes()[2..], 16)
+            .await;
+        (
+            balance_hex.and_then(|b| BigUint::parse_bytes(&b.as_bytes()[2..], 16)),
+            wait_time,
+        )
     }
-    async fn get_token_balance(&self, token: &Token, address: String) -> SupportOption<BigUint> {
+    async fn get_token_balance(
+        &self,
+        token: &Token,
+        address: String,
+    ) -> (Option<BigUint>, Option<f32>) {
         let params = json!([
             {
                 "to": token.address,
@@ -77,8 +87,11 @@ impl ChainOps for EvmChain {
             },
             "latest"
         ]);
-        let balance_hex = self.rpc_call("eth_call", params).await.to_supported()?;
-        BigUint::parse_bytes(&balance_hex.as_bytes()[2..], 16).into()
+        let (balance_hex, wait_time) = self.rpc_call("eth_call", params).await;
+        (
+            balance_hex.and_then(|b| BigUint::parse_bytes(&b.as_bytes()[2..], 16)),
+            wait_time,
+        )
     }
     async fn get_holdings_balance(
         &self,
@@ -86,7 +99,7 @@ impl ChainOps for EvmChain {
     ) -> SupportOption<Vec<(String, BigUint)>> {
         SupportOption::Unsupported
     }
-    async fn get_token_decimals(&self, token_address: String) -> SupportOption<usize> {
+    async fn get_token_decimals(&self, token_address: String) -> Option<usize> {
         let params = json!([
             {
                 "to": token_address,
@@ -94,9 +107,8 @@ impl ChainOps for EvmChain {
             },
             "latest"
         ]);
-        let decimals_hex = self.rpc_call("eth_call", params).await.to_supported()?;
-        BigUint::parse_bytes(&decimals_hex.as_bytes()[2..], 16)
-            .to_supported()?
+        let decimals_hex = self.rpc_call("eth_call", params).await.0?;
+        BigUint::parse_bytes(&decimals_hex.as_bytes()[2..], 16)?
             .to_usize()
             .into()
     }

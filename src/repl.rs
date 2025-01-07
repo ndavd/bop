@@ -1,10 +1,13 @@
-use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr, time::Duration};
 
 use age::secrecy::{ExposeSecret, SecretString};
+use futures::{stream, StreamExt};
+use itertools::Itertools;
 use num_bigint::BigUint;
 use reqwest::{header::HeaderMap, Url};
 use rustyline::{error::ReadlineError, DefaultEditor};
 use serde::{Deserialize, Serialize};
+use tokio::time::sleep;
 
 use crate::{
     chain::{Chain, ChainOps, ChainType, Token},
@@ -18,6 +21,7 @@ static BOOK_OF_PROFITS_SHORT: &str = "BoP";
 
 static CHAIN_TYPES: &[ChainType; 3] = &[ChainType::Evm, ChainType::Solana, ChainType::Ton];
 
+// TODO: These hashmaps aren't really needed, just use vectors of tuples
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct ReplConfig {
     /// Map of chain-type to account address and optional alias
@@ -53,6 +57,7 @@ pub struct Repl {
     secret: Option<SecretString>,
 }
 
+#[derive(Debug, Clone)]
 struct ReplBalanceEntry {
     chain: String,
     account: String,
@@ -67,6 +72,13 @@ impl Repl {
             Some(x) => *x,
             None => true,
         }
+    }
+    fn enabled_chains(&self) -> Vec<Chain> {
+        self.chains
+            .clone()
+            .into_iter()
+            .filter(|c| self.is_chain_enabled(&c.properties.get_id()))
+            .collect::<Vec<_>>()
     }
     fn enabled_chains_of_type(&self, chain_type: &ChainType) -> Vec<Chain> {
         self.chains
@@ -451,7 +463,7 @@ alias, if set.
                                 ))
                             }
                         };
-                        let token = match Token::new(token_address, &chain).await.to_result()? {
+                        let token = match Token::new(token_address, &chain).await {
                             Some(x) => x,
                             None => return Err("Could not fetch token info".to_string()),
                         };
@@ -545,7 +557,7 @@ alias, if set.
     async fn handle_balance(&mut self, command_parts: &[&str]) -> Result<(), String> {
         match command_parts.len() {
             0 => {
-                println!("Fetching account holdings...");
+                // TODO: Refactor; this is a mess, but it works
                 let accounts = self
                     .config
                     .accounts
@@ -554,99 +566,190 @@ alias, if set.
                         accounts.iter().map(|a| (chain_type, a)).collect::<Vec<_>>()
                     })
                     .collect::<Vec<_>>();
-                let tokens = self.config.tokens.values().flatten().collect::<Vec<_>>();
+                let (accounts_supported, accounts_not_supported): (Vec<_>, Vec<_>) = accounts
+                    .into_iter()
+                    .flat_map(|(chain_type, account)| {
+                        self.enabled_chains_of_type(chain_type)
+                            .iter()
+                            .map(|chain| (chain.clone(), account.clone()))
+                            .collect::<Vec<_>>()
+                    })
+                    .partition(|x| x.0.chain_type == ChainType::Ton);
+
+                let accounts_not_supported = accounts_not_supported
+                    .iter()
+                    .flat_map(|(chain, account)| {
+                        self.config
+                            .tokens
+                            .get(&chain.properties.get_id())
+                            .unwrap_or(&Vec::new())
+                            .iter()
+                            .map(|token| (chain.clone(), token.clone(), account.clone()))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect::<Vec<_>>();
+
+                let accounts_natives = self
+                    .enabled_chains()
+                    .iter()
+                    .flat_map(|chain| {
+                        self.config
+                            .accounts
+                            .get(&chain.chain_type)
+                            .unwrap_or(&Vec::new())
+                            .to_owned()
+                            .iter()
+                            .map(|account| (chain.clone(), account.clone()))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect::<Vec<_>>();
+
+                println!(
+                    "Querying {} balances...",
+                    accounts_supported.len()
+                        + accounts_not_supported.len()
+                        + accounts_natives.len()
+                );
+
                 let mut balances: Vec<ReplBalanceEntry> = Vec::new();
-                for (chain_type, account) in accounts {
-                    for chain in self.enabled_chains_of_type(chain_type) {
-                        let chain_name = chain.properties.name.clone();
-                        let account_label = Repl::format_account(account);
-                        let mut holdings =
-                            match chain.get_holdings_balance(account.0.to_string()).await {
-                                SupportOption::Unsupported => {
-                                    let tokens_of_chain = self
-                                        .config
-                                        .tokens
-                                        .get(&chain.properties.get_id())
-                                        .unwrap_or(&Vec::new())
-                                        .to_owned();
-                                    let mut holdings: Vec<(String, BigUint)> = Vec::new();
-                                    for token in tokens_of_chain {
-                                        match chain
-                                            .get_token_balance(&token, account.0.clone())
-                                            .await
-                                            .to_result()?
-                                        {
-                                            Some(x) => {
-                                                holdings.push((token.address.clone(), x));
-                                            }
-                                            _ => {
-                                                return Err(format!(
-                                                    "Could not fetch {}:{} holding for {}",
-                                                    chain.properties.get_id(),
-                                                    token.address,
-                                                    account_label
-                                                ))
-                                            }
-                                        }
+
+                let results_natives = stream::iter(accounts_natives.iter().enumerate())
+                    .map(async |(i, (chain, account))| {
+                        let mut retries = 0;
+                        loop {
+                            let (value, retry_time) =
+                                chain.get_native_token_balance(account.0.clone()).await;
+                            match value {
+                                Some(x) => return (i, x),
+                                None => {
+                                    if retries > 3 {
+                                        sleep(Duration::from_secs_f32(retry_time.unwrap_or(2.0)))
+                                            .await;
                                     }
-                                    holdings
+                                    retries += 1;
                                 }
-                                SupportOption::SupportedNone => {
-                                    return Err(format!(
-                                        "Could not fetch {} token holdings for {}",
-                                        chain_name, account_label
-                                    ))
+                            };
+                        }
+                    })
+                    .buffer_unordered(20)
+                    .collect::<Vec<_>>()
+                    .await;
+
+                let results_not_supported = stream::iter(accounts_not_supported.iter().enumerate())
+                    .map(async |(i, (chain, token, account))| {
+                        let mut retries = 0;
+                        loop {
+                            let (value, retry_time) =
+                                chain.get_token_balance(token, account.0.clone()).await;
+                            match value {
+                                Some(x) => return (i, x),
+                                None => {
+                                    if retries > 3 {
+                                        sleep(Duration::from_secs_f32(retry_time.unwrap_or(2.0)))
+                                            .await;
+                                    }
+                                    retries += 1;
                                 }
-                                SupportOption::SupportedSome(x) => x,
                             };
-                        let native_balance = match chain
-                            .get_native_token_balance(account.0.clone())
-                            .await
-                        {
-                            Some(x) => x,
-                            None => return Err(format!("Could not fetch native token balance")),
-                        };
-                        holdings.push((
-                            chain.properties.native_token.address.clone(),
-                            native_balance,
-                        ));
-                        for (token_address, balance) in holdings {
-                            if balance == BigUint::ZERO {
-                                continue;
-                            }
-                            if let Some(token) = tokens.iter().find(|t| t.address == token_address)
-                            {
-                                balances.push(ReplBalanceEntry {
-                                    account: account_label.clone(),
-                                    chain: chain.properties.name.clone(),
-                                    #[allow(suspicious_double_ref_op)]
-                                    token: token.clone().clone(),
-                                    balance_native: balance,
-                                    balance_usd: 0.0,
-                                });
+                        }
+                    })
+                    .buffer_unordered(20)
+                    .collect::<Vec<_>>()
+                    .await;
+
+                let results_supported = stream::iter(accounts_supported.iter().enumerate())
+                    .map(async |(i, (chain, account))| {
+                        let mut retries = 0;
+                        loop {
+                            let value = chain
+                                .get_holdings_balance(account.0.clone())
+                                .await
+                                .to_result()
+                                .unwrap();
+                            match value {
+                                Some(x) => return (i, x),
+                                None => {
+                                    if retries > 3 {
+                                        sleep(Duration::from_secs_f32(1.0)).await;
+                                    }
+                                    retries += 1;
+                                }
                             };
+                        }
+                    })
+                    .buffer_unordered(20)
+                    .collect::<Vec<_>>()
+                    .await;
+
+                for (i, balance) in results_natives {
+                    let (chain, account) = &accounts_natives[i];
+                    let account_label = Repl::format_account(&account);
+                    if balance != BigUint::ZERO {
+                        balances.push(ReplBalanceEntry {
+                            account: account_label.clone(),
+                            chain: chain.properties.name.clone(),
+                            token: chain.properties.native_token.clone(),
+                            balance_native: balance,
+                            balance_usd: 0.0,
+                        });
+                    }
+                }
+                for (i, balance) in results_not_supported {
+                    let (chain, token, account) = &accounts_not_supported[i];
+                    let account_label = Repl::format_account(&account);
+                    if balance != BigUint::ZERO {
+                        balances.push(ReplBalanceEntry {
+                            account: account_label.clone(),
+                            chain: chain.properties.name.clone(),
+                            token: token.clone().clone(),
+                            balance_native: balance,
+                            balance_usd: 0.0,
+                        });
+                    }
+                }
+                for (i, account_holdings) in results_supported {
+                    let (chain, account) = &accounts_supported[i];
+                    let account_label = Repl::format_account(&account);
+                    let tokens_of_chain = self
+                        .config
+                        .tokens
+                        .get(&chain.properties.get_id())
+                        .unwrap_or(&Vec::new())
+                        .to_owned();
+                    for (token_address, balance) in account_holdings {
+                        let token = tokens_of_chain
+                            .iter()
+                            .find(|t| t.address == token_address)
+                            .unwrap();
+                        if balance != BigUint::ZERO {
+                            balances.push(ReplBalanceEntry {
+                                account: account_label.clone(),
+                                chain: chain.properties.name.clone(),
+                                token: token.clone(),
+                                balance_native: balance,
+                                balance_usd: 0.0,
+                            });
                         }
                     }
                 }
-                println!("Fetching token prices...");
-                let pairs = match dexscreener::get_pairs(
-                    tokens
-                        .iter()
-                        .map(|token| token.address.clone())
-                        .filter(|t| balances.iter().find(|b| b.token.address == *t).is_some())
-                        .collect(),
-                )
-                .await
-                {
+
+                let tokens_to_fetch_price = balances
+                    .iter()
+                    .map(|b| b.token.address.clone())
+                    .unique()
+                    .collect::<Vec<_>>();
+                println!("Fetching {} token prices...", tokens_to_fetch_price.len());
+                let pairs = match dexscreener::get_pairs(tokens_to_fetch_price).await {
                     Some(x) => x,
                     None => return Err(format!("Could not fetch tokens price")),
                 }
                 .iter()
                 .filter_map(|p| {
-                    let price: f64 = (p.price_usd.clone()?).parse().ok()?;
+                    let price: f64 = p.price_usd.clone()?.parse().ok()?;
                     Some((p.base_token.address.clone(), price))
                 })
                 .collect::<Vec<_>>();
+
                 for i in 0..balances.len() {
                     let balance = &mut balances[i];
                     if let Some((_, price)) =
@@ -655,14 +758,14 @@ alias, if set.
                         balance.balance_usd = price * balance.token.format(&balance.balance_native);
                     }
                 }
-                balances.sort_by(|a, b| a.balance_usd.total_cmp(&b.balance_usd));
+                balances.sort_by(|a, b| b.balance_usd.total_cmp(&a.balance_usd));
                 let relevant_balances = balances
                     .iter()
                     .filter(|balance| balance.balance_usd >= 0.1)
                     .collect::<Vec<_>>();
                 let table_titles = Vec::from([
-                    "Chain".to_string(),
                     "Account".to_string(),
+                    "Chain".to_string(),
                     "Token".to_string(),
                     "Balance".to_string(),
                     "Balance (USD)".to_string(),
@@ -671,8 +774,8 @@ alias, if set.
                     .iter()
                     .map(|balance| {
                         Vec::from([
-                            balance.chain.clone(),
                             balance.account.clone(),
+                            balance.chain.clone(),
                             balance.token.symbol.clone(),
                             balance.token.format(&balance.balance_native).to_string(),
                             balance.balance_usd.to_string(),
@@ -682,10 +785,13 @@ alias, if set.
                 rows.insert(0, table_titles);
                 let t = Table::from(rows);
                 let title = "Balances".to_title();
-                println!("{title}\n{t}\n");
+                println!("\n{title}\n{t}\n");
                 println!(
-                    "Total: {} USD",
-                    balances.iter().fold(0.0, |sum, b| sum + b.balance_usd)
+                    "Holdings: {}\nBalance: {} USD",
+                    relevant_balances.len(),
+                    relevant_balances
+                        .iter()
+                        .fold(0.0, |sum, b| sum + b.balance_usd),
                 );
                 Ok(())
             }
@@ -693,6 +799,9 @@ alias, if set.
         }
     }
     async fn handle_command(&mut self, command: &str) {
+        if command.trim() == "" {
+            return;
+        }
         let command = command.split_whitespace().collect::<Vec<_>>();
         let command_parts = &command[1..];
         if let Err(x) = match command[0] {
@@ -703,7 +812,6 @@ alias, if set.
             "config" => self.handle_config(command_parts),
             "help" | "?" => Ok(Self::display_help()),
             "exit" | "quit" => std::process::exit(0),
-            "" => Ok(()),
             x => Err(format!("Unknown command: {x:?}")),
         } {
             eprintln!("{x}");
@@ -768,7 +876,7 @@ alias, if set.
                     _ => {
                         let err = "Bad password, try again".to_string();
                         if keep_trying {
-                            println!("{err}");
+                            eprintln!("{err}");
                         } else {
                             return Err(err);
                         }
@@ -900,7 +1008,7 @@ impl Default for Repl {
             "https://tonapi.io/v2",
             "Ton",
             "TON",
-            "0x582d872a1b094fc48f5de31d3b73f2d9be47def1",
+            "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
             9,
         )]);
         let evm = Vec::from([

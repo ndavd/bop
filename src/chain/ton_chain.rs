@@ -3,7 +3,7 @@ use std::str::FromStr;
 use tonlib_core::TonAddress;
 
 use num_bigint::BigUint;
-use reqwest::{Client, Url};
+use reqwest::{Client, StatusCode, Url};
 use serde::de::DeserializeOwned;
 
 use crate::utils::{SupportOption, ToSupported};
@@ -69,7 +69,7 @@ impl TonChain {
         &self,
         route: String,
         query_pairs: Vec<(&str, &str)>,
-    ) -> Option<T> {
+    ) -> (Option<T>, Option<f32>) {
         let mut url = Url::parse(&format!(
             "{}/{}",
             self.properties.rpc_url.to_string(),
@@ -77,41 +77,54 @@ impl TonChain {
         ))
         .unwrap();
         url.query_pairs_mut().extend_pairs(query_pairs);
-        self.http_client
+        let response = match self
+            .http_client
             .get(url)
             .headers(self.properties.rpc_headers.clone())
             .send()
             .await
-            .ok()?
-            .json::<T>()
-            .await
             .ok()
+        {
+            Some(x) => x,
+            None => return (None, None),
+        };
+        let mut seconds = None;
+        if response.status() == StatusCode::TOO_MANY_REQUESTS {
+            seconds = response
+                .headers()
+                .get("retry-after")
+                .and_then(|x| x.to_str().ok())
+                .and_then(|x| x.parse().ok());
+        }
+        (response.json::<T>().await.ok(), seconds)
     }
 }
 
 impl ChainOps for TonChain {
-    async fn get_native_token_balance(&self, address: String) -> Option<BigUint> {
-        let address = self.parse_wallet_address(&address)?;
-        Some(BigUint::from(
-            self.api_call::<TonGetAccountResponse>(format!("accounts/{address}"), vec![])
-                .await?
-                .balance,
-        ))
+    async fn get_native_token_balance(&self, address: String) -> (Option<BigUint>, Option<f32>) {
+        let (balance, wait_time) = self
+            .api_call::<TonGetAccountResponse>(format!("accounts/{address}"), vec![])
+            .await;
+        (
+            balance.and_then(|b| Some(BigUint::from(b.balance))),
+            wait_time,
+        )
     }
-    async fn get_token_balance(&self, token: &Token, address: String) -> SupportOption<BigUint> {
-        let address = self.parse_wallet_address(&address).to_supported()?;
-        BigUint::from_str(
-            self.api_call::<TonGetAccountJettonBalanceResponse>(
+    async fn get_token_balance(
+        &self,
+        token: &Token,
+        address: String,
+    ) -> (Option<BigUint>, Option<f32>) {
+        let (balance, wait_time) = self
+            .api_call::<TonGetAccountJettonBalanceResponse>(
                 format!("accounts/{}/jettons{}", address, token.address),
                 vec![],
             )
-            .await
-            .to_supported()?
-            .balance
-            .as_str(),
+            .await;
+        (
+            balance.and_then(|b| BigUint::from_str(b.balance.as_str()).ok()),
+            wait_time,
         )
-        .ok()
-        .into()
     }
     async fn get_holdings_balance(&self, address: String) -> SupportOption<Vec<(String, BigUint)>> {
         let address = self.parse_wallet_address(&address).to_supported()?;
@@ -120,6 +133,7 @@ impl ChainOps for TonChain {
             vec![],
         )
         .await
+        .0
         .to_supported()?
         .balances
         .iter()
@@ -132,12 +146,12 @@ impl ChainOps for TonChain {
         .collect::<Option<_>>()
         .into()
     }
-    async fn get_token_decimals(&self, token_address: String) -> SupportOption<usize> {
+    async fn get_token_decimals(&self, token_address: String) -> Option<usize> {
         usize::from_str(
             &self
                 .api_call::<TonGetJettonInfo>(format!("jettons/{token_address}"), vec![])
                 .await
-                .to_supported()?
+                .0?
                 .metadata
                 .decimals,
         )
@@ -151,6 +165,7 @@ impl ChainOps for TonChain {
             vec![],
         )
         .await
+        .0
         .to_supported()?
         .balances
         .iter()

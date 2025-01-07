@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 
-use futures::future::join_all;
-use reqwest::{Client, Url};
+use futures::{stream, StreamExt};
+use reqwest::{Client, StatusCode, Url};
 use serde::Deserialize;
+use tokio::time::sleep;
 
 pub const DEXSCREENER_API_URL: &str = "https://api.dexscreener.com";
 
@@ -26,43 +27,62 @@ pub struct Pair {
     pub quote_token: Token,
     pub price_native: String,
     pub price_usd: Option<String>,
+    pub market_cap: Option<u64>,
 }
 
 #[derive(Deserialize, Debug)]
 struct GetPairsResponse {
-    pairs: Vec<Pair>,
+    pairs: Option<Vec<Pair>>,
 }
 
 async fn get_pairs_request(url: Url) -> Option<Vec<Pair>> {
-    Some(
-        Client::new()
-            .get(url)
-            .send()
-            .await
-            .ok()?
-            .json::<GetPairsResponse>()
-            .await
-            .ok()?
-            .pairs,
-    )
+    let response = Client::new().get(url.clone()).send().await.ok()?;
+    let status = response.status();
+    if status != StatusCode::OK {
+        eprintln!("PRICES {status}");
+    }
+    response
+        .json::<GetPairsResponse>()
+        .await
+        .ok()?
+        .pairs
+        .or(Some(Vec::new()))
 }
 
-pub async fn get_pairs(addresses: Vec<String>) -> Option<Vec<Pair>> {
-    let requests = addresses.chunks(25).map(|a| {
-        let url = Url::from_str(
-            format!("{DEXSCREENER_API_URL}/latest/dex/tokens/{}", a.join(",")).as_str(),
-        )
-        .unwrap();
-        get_pairs_request(url)
-    });
-    let results = join_all(requests).await;
-    let pairs = results
-        .iter()
-        .filter_map(|r| r.clone())
+pub async fn get_pairs(tokens: Vec<String>) -> Option<Vec<Pair>> {
+    let pairs = stream::iter(tokens.clone())
+        .map(async |t| {
+            let url =
+                Url::from_str(format!("{DEXSCREENER_API_URL}/latest/dex/tokens/{}", t).as_str())
+                    .unwrap();
+            let mut retries = 0;
+            loop {
+                match get_pairs_request(url.clone()).await {
+                    Some(x) => return x,
+                    None => {
+                        if retries > 3 {
+                            sleep(Duration::from_secs_f32(2.0)).await;
+                        }
+                        retries += 1;
+                    }
+                };
+            }
+        })
+        .buffer_unordered(20)
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
         .flatten()
         .collect::<Vec<_>>();
-    if pairs.len() == 0 {
-        return None;
-    }
-    Some(pairs)
+    let p = tokens
+        .iter()
+        .filter_map(|token| {
+            pairs
+                .iter()
+                .filter(|pair| pair.base_token.address == *token)
+                .max_by_key(|pair| pair.market_cap.unwrap_or(0))
+                .cloned()
+        })
+        .collect::<Vec<_>>();
+    Some(p)
 }
