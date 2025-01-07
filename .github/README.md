@@ -19,8 +19,9 @@ can change it to one of your liking.
 > It is highly recommended to use custom RPCs, since the public ones often have
 > severe rate limits.
 
-See [features](https://github.com/bop/#features).\
-See [supported blockchains](https://github.com/bop/#supported-blockchains).
+See [features](https://github.com/ndavd/bop/#features).\
+See
+[supported blockchains](https://github.com/ndavd/bop/#supported-blockchains).
 
 ## Installation
 
