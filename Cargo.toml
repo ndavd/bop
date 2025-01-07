@@ -1,12 +1,15 @@
 [package]
-name = "bop"
+name = "book-of-profits"
 version = "0.1.0"
 edition = "2021"
 authors = ["Nuno David <email@ndavd.com>"]
 license = "MIT"
-description = "Encrypted multichain crypto portfolio tracker"
+description = "Secure crypto portfolio tracker REPL"
 readme = ".github/README.md"
 repository = "https://github.com/ndavd/bop"
+exclude = [".github/workflows"]
+keywords = ["blockchain", "portfolio", "tracker"]
+categories = ["cryptography::cryptocurrencies", "visualization"]
 
 [dependencies]
 age = { version = "0.11.1", features = ["cli-common"] }

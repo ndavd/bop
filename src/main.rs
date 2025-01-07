@@ -9,6 +9,11 @@ use repl::Repl;
 
 #[tokio::main]
 async fn main() {
+    if let Some(arg) = std::env::args().nth(1) {
+        if arg.as_str() == "--version" {
+            return println!("bop v{}", env!("CARGO_PKG_VERSION"));
+        }
+    }
     if let Err(err) = Repl::default().run().await {
         eprintln!("Error: {}", err);
     }

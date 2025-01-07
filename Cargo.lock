@@ -174,7 +174,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bop"
+name = "book-of-profits"
 version = "0.1.0"
 dependencies = [
  "age",
