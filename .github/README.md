@@ -1,5 +1,7 @@
 # 📒📈 Book of Profits
 
+<img alt="Crates.io Version" src="https://img.shields.io/crates/v/book-of-profits?style=flat-square">
+
 `book-of-profits` is a multichain portfolio tracker in
 [REPL](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop) form.
 
