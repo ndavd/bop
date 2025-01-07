@@ -76,6 +76,7 @@ cargo uninstall book-of-profits
 | `❌`                      | Cache balances in order to display them in other views without refetching everything |
 | `❌`                      | Display spinner when loading                                                         |
 | `❌`                      | Show total balance of a single token                                                 |
+| `❌`                      | Web client                                                                           |
 
 ## Supported Blockchains
 
