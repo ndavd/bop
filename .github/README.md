@@ -23,7 +23,8 @@ can change it to one of your liking.
 
 See [features](https://github.com/ndavd/bop?tab=readme-ov-file#features).\
 See
-[supported blockchains](https://github.com/ndavd/bop?tab=readme-ov-file#supported-blockchains).
+[supported blockchains](https://github.com/ndavd/bop?tab=readme-ov-file#supported-blockchains).\
+See [faq](https://github.com/ndavd/bop?tab=readme-ov-file#faq).
 
 ## Installation
 
@@ -110,6 +111,37 @@ cargo uninstall book-of-profits
 - PulseChain
 - Polygon zkEVM
 - Telos
+
+## FAQ
+
+#### Q: Where does it store the data?
+
+All data is stored in the configuration file `.bop-data`, which is stored in
+user's config directory:
+
+- For Linux, that's `$XDG_CONFIG_HOME` or `$HOME/.config`
+  - Example `/home/alice/.config/.bop-data`
+- For MacOS, that's `$HOME/Library/Application Support`
+  - Example `/Users/Alice/Library/Application/.bop-data`
+- For Windows, that's `{FOLDERID_RoamingAppData}`
+  - Example `C:\Users\Alice\AppData\Roaming\.bop-data`
+
+> [!NOTE]
+> Keep in mind that if you didn't set a password its contents are not encrypted.
+
+#### Q: Why a REPL?
+
+I wanted this to be primarly a terminal application and a REPL allows the
+decrypted data to be loaded into memory once, enabling users to execute multiple
+commands while only needing to input their password once, and also makes the
+process of updating the data and re-encrypting it trivial.
+
+Also because I'm a fan of [chisel](https://book.getfoundry.sh/reference/chisel).
+
+#### Q: I'm not a terminal user. Is this getting a client?
+
+Building a web client is a planned feature. It should not be hard to compile the
+core components into WASM and make a client side application out of them.
 
 ## Contributing
 
