@@ -78,6 +78,7 @@ cargo uninstall book-of-profits
 | `❌`                      | Display spinner when loading                                                         |
 | `❌`                      | Show total balance of a single token                                                 |
 | `❌`                      | Web client                                                                           |
+| `❌`                      | Centralized exchanges support                                                        |
 
 ## Supported Blockchains
 
