@@ -4,12 +4,12 @@ use base58::FromBase58;
 use curve25519_dalek::edwards::CompressedEdwardsY;
 use num_bigint::BigUint;
 use num_traits::FromPrimitive;
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use serde_query::Deserialize;
 
-use crate::{chain::*, dexscreener};
+use crate::{chain::*, dexscreener, utils::get_retry_time};
 
 #[derive(Debug, Clone)]
 pub struct SolChain {
@@ -49,14 +49,7 @@ impl SolChain {
             Some(x) => x,
             None => return (None, None),
         };
-        let mut seconds = None;
-        if response.status() == StatusCode::TOO_MANY_REQUESTS {
-            seconds = response
-                .headers()
-                .get("retry-after")
-                .and_then(|x| x.to_str().ok())
-                .and_then(|x| x.parse().ok());
-        }
+        let seconds = get_retry_time(&response);
         (response.json::<T>().await.ok(), seconds)
     }
     fn to_b58(address: &str) -> Option<Vec<u8>> {

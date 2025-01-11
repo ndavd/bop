@@ -3,10 +3,10 @@ use std::str::FromStr;
 use tonlib_core::TonAddress;
 
 use num_bigint::BigUint;
-use reqwest::{Client, StatusCode, Url};
+use reqwest::{Client, Url};
 use serde::de::DeserializeOwned;
 
-use crate::utils::{SupportOption, ToSupported};
+use crate::utils::{get_retry_time, SupportOption, ToSupported};
 
 use super::{Chain, ChainOps, ChainProperties, Token};
 
@@ -88,14 +88,7 @@ impl TonChain {
             Some(x) => x,
             None => return (None, None),
         };
-        let mut seconds = None;
-        if response.status() == StatusCode::TOO_MANY_REQUESTS {
-            seconds = response
-                .headers()
-                .get("retry-after")
-                .and_then(|x| x.to_str().ok())
-                .and_then(|x| x.parse().ok());
-        }
+        let seconds = get_retry_time(&response);
         (response.json::<T>().await.ok(), seconds)
     }
 }

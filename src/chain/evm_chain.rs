@@ -1,4 +1,3 @@
-use reqwest::StatusCode;
 use sha3::{Digest, Keccak256};
 
 use num_bigint::BigUint;
@@ -6,7 +5,7 @@ use num_traits::ToPrimitive;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::chain::*;
+use crate::{chain::*, utils::get_retry_time};
 
 pub struct EvmChain {
     properties: ChainProperties,
@@ -46,14 +45,7 @@ impl EvmChain {
             Some(x) => x,
             None => return (None, None),
         };
-        let mut seconds = None;
-        if response.status() == StatusCode::TOO_MANY_REQUESTS {
-            seconds = response
-                .headers()
-                .get("retry-after")
-                .and_then(|x| x.to_str().ok())
-                .and_then(|x| x.parse().ok());
-        }
+        let seconds = get_retry_time(&response);
         (
             response
                 .json::<EthCallResponse>()

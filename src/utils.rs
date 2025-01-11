@@ -5,7 +5,19 @@ use std::{
     time::Duration,
 };
 
+use reqwest::{Response, StatusCode};
 use tokio::time::sleep;
+
+pub fn get_retry_time(response: &Response) -> Option<f32> {
+    if response.status() != StatusCode::TOO_MANY_REQUESTS {
+        return None;
+    }
+    response
+        .headers()
+        .get("retry-after")
+        .and_then(|x| x.to_str().ok())
+        .and_then(|x| x.parse().ok())
+}
 
 pub async fn handle_retry<F, Fut, T>(mut task: F) -> T
 where
