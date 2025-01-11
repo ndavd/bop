@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 
-use std::{str::FromStr, time::Duration};
+use std::str::FromStr;
 
 use futures::{stream, StreamExt};
 use reqwest::{Client, StatusCode, Url};
 use serde::Deserialize;
-use tokio::time::sleep;
+
+use crate::utils::handle_retry;
 
 pub const DEXSCREENER_API_URL: &str = "https://api.dexscreener.com";
 
@@ -55,18 +56,8 @@ pub async fn get_pairs(tokens: Vec<String>) -> Option<Vec<Pair>> {
             let url =
                 Url::from_str(format!("{DEXSCREENER_API_URL}/latest/dex/tokens/{}", t).as_str())
                     .unwrap();
-            let mut retries = 0;
-            loop {
-                match get_pairs_request(url.clone()).await {
-                    Some(x) => return x,
-                    None => {
-                        if retries > 3 {
-                            sleep(Duration::from_secs_f32(2.0)).await;
-                        }
-                        retries += 1;
-                    }
-                };
-            }
+            let task = async || (get_pairs_request(url.clone()).await, None);
+            handle_retry(task).await
         })
         .buffer_unordered(20)
         .collect::<Vec<_>>()

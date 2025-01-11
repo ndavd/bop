@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr, time::Duration};
+use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 
 use age::secrecy::{ExposeSecret, SecretString};
 use futures::{stream, StreamExt};
@@ -7,7 +7,6 @@ use num_bigint::BigUint;
 use reqwest::{header::HeaderMap, Url};
 use rustyline::{error::ReadlineError, DefaultEditor};
 use serde::{Deserialize, Serialize};
-use tokio::time::sleep;
 
 use crate::{
     chain::{Chain, ChainOps, ChainType, Token},
@@ -614,21 +613,8 @@ alias, if set.
 
                 let results_natives = stream::iter(accounts_natives.iter().enumerate())
                     .map(async |(i, (chain, account))| {
-                        let mut retries = 0;
-                        loop {
-                            let (value, retry_time) =
-                                chain.get_native_token_balance(account.0.clone()).await;
-                            match value {
-                                Some(x) => return (i, x),
-                                None => {
-                                    if retries > 3 {
-                                        sleep(Duration::from_secs_f32(retry_time.unwrap_or(2.0)))
-                                            .await;
-                                    }
-                                    retries += 1;
-                                }
-                            };
-                        }
+                        let task = || chain.get_native_token_balance(account.0.clone());
+                        handle_retry_indexed(i, task).await
                     })
                     .buffer_unordered(20)
                     .collect::<Vec<_>>()
@@ -636,21 +622,8 @@ alias, if set.
 
                 let results_not_supported = stream::iter(accounts_not_supported.iter().enumerate())
                     .map(async |(i, (chain, token, account))| {
-                        let mut retries = 0;
-                        loop {
-                            let (value, retry_time) =
-                                chain.get_token_balance(token, account.0.clone()).await;
-                            match value {
-                                Some(x) => return (i, x),
-                                None => {
-                                    if retries > 3 {
-                                        sleep(Duration::from_secs_f32(retry_time.unwrap_or(2.0)))
-                                            .await;
-                                    }
-                                    retries += 1;
-                                }
-                            };
-                        }
+                        let task = || chain.get_token_balance(token, account.0.clone());
+                        handle_retry_indexed(i, task).await
                     })
                     .buffer_unordered(20)
                     .collect::<Vec<_>>()
@@ -658,23 +631,17 @@ alias, if set.
 
                 let results_supported = stream::iter(accounts_supported.iter().enumerate())
                     .map(async |(i, (chain, account))| {
-                        let mut retries = 0;
-                        loop {
-                            let value = chain
-                                .get_holdings_balance(account.0.clone())
-                                .await
-                                .to_result()
-                                .unwrap();
-                            match value {
-                                Some(x) => return (i, x),
-                                None => {
-                                    if retries > 3 {
-                                        sleep(Duration::from_secs_f32(1.0)).await;
-                                    }
-                                    retries += 1;
-                                }
-                            };
-                        }
+                        let task = async || {
+                            (
+                                chain
+                                    .get_holdings_balance(account.0.clone())
+                                    .await
+                                    .to_result()
+                                    .unwrap(),
+                                None,
+                            )
+                        };
+                        handle_retry_indexed(i, task).await
                     })
                     .buffer_unordered(20)
                     .collect::<Vec<_>>()

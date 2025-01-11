@@ -1,7 +1,39 @@
 use std::{
     fmt::Display,
+    future::Future,
     ops::{FromResidual, Try},
+    time::Duration,
 };
+
+use tokio::time::sleep;
+
+pub async fn handle_retry<F, Fut, T>(mut task: F) -> T
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = (Option<T>, Option<f32>)>,
+{
+    let mut retries = 0;
+    loop {
+        let (result, retry_time) = task().await;
+        match result {
+            Some(x) => return x,
+            None => {
+                if retries >= 3 {
+                    sleep(Duration::from_secs_f32(retry_time.unwrap_or(2.0))).await;
+                }
+                retries += 1;
+            }
+        };
+    }
+}
+
+pub async fn handle_retry_indexed<F, Fut, T>(index: usize, task: F) -> (usize, T)
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = (Option<T>, Option<f32>)>,
+{
+    (index, handle_retry(task).await)
+}
 
 pub trait StylizedText {
     fn to_colored(&self) -> String;
