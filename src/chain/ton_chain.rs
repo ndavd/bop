@@ -6,7 +6,10 @@ use num_bigint::BigUint;
 use reqwest::{Client, Url};
 use serde::de::DeserializeOwned;
 
-use crate::utils::{get_retry_time, SupportOption, ToSupported};
+use crate::utils::{
+    retry::get_retry_time,
+    support_option::{SupportOption, ToSupported},
+};
 
 use super::{Chain, ChainOps, ChainProperties, Token};
 

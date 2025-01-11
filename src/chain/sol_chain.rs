@@ -9,7 +9,11 @@ use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use serde_query::Deserialize;
 
-use crate::{chain::*, dexscreener, utils::get_retry_time};
+use crate::{
+    chain::*,
+    dexscreener,
+    utils::{retry::get_retry_time, support_option::ToSupported},
+};
 
 #[derive(Debug, Clone)]
 pub struct SolChain {

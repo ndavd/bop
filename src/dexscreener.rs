@@ -6,7 +6,7 @@ use futures::{stream, StreamExt};
 use reqwest::{Client, StatusCode, Url};
 use serde::Deserialize;
 
-use crate::utils::handle_retry;
+use crate::utils::retry::handle_retry;
 
 pub const DEXSCREENER_API_URL: &str = "https://api.dexscreener.com";
 

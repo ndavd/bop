@@ -5,7 +5,7 @@ use num_traits::ToPrimitive;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::{chain::*, utils::get_retry_time};
+use crate::{chain::*, utils::retry::get_retry_time};
 
 pub struct EvmChain {
     properties: ChainProperties,

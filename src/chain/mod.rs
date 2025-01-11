@@ -11,10 +11,7 @@ use serde::{Deserialize, Serialize};
 use sol_chain::SolChain;
 use ton_chain::TonChain;
 
-use crate::{
-    dexscreener,
-    utils::{SupportOption, ToSupported},
-};
+use crate::{dexscreener, utils::support_option::SupportOption};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Token {

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     chain::{Chain, ChainOps, ChainType, Token},
     dexscreener,
-    utils::*,
+    utils::{retry::handle_retry_indexed, table::Table, text::StylizedText},
 };
 
 static DATA_FILE: &str = ".bop-data";
