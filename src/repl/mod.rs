@@ -13,7 +13,11 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    chain::{Chain, ChainOps, ChainType, Token, CHAIN_TYPES},
+    chain::{
+        chain_type::{ChainType, CHAIN_TYPES},
+        token::Token,
+        Chain, ChainOps,
+    },
     dexscreener,
     utils::{retry::handle_retry_indexed, table::Table, text::StylizedText},
 };

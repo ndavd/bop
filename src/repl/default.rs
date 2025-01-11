@@ -1,4 +1,4 @@
-use crate::chain::{Chain, ChainType};
+use crate::chain::{chain_type::ChainType, Chain};
 
 use super::Repl;
 
