@@ -133,6 +133,7 @@ pub struct Table {
     rows: Vec<Vec<String>>,
     color_first_row: bool,
     spacing: usize,
+    pub title: String,
 }
 
 impl From<Vec<Vec<String>>> for Table {
@@ -147,7 +148,8 @@ impl From<Vec<Vec<String>>> for Table {
 impl Default for Table {
     fn default() -> Self {
         Self {
-            rows: Vec::new(),
+            title: String::default(),
+            rows: Vec::default(),
             color_first_row: true,
             spacing: 2,
         }
@@ -158,6 +160,10 @@ impl Display for Table {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.rows.len() == 0 {
             return write!(f, "");
+        }
+        if self.title != String::default() {
+            let title = self.title.as_str().to_title();
+            writeln!(f, "{title}")?;
         }
         let row_count = self.rows.len();
         let col_count = self.rows[0].len();
@@ -183,9 +189,7 @@ impl Display for Table {
                     row
                 }
             )?;
-            if i != row_count - 1 {
-                writeln!(f)?;
-            }
+            writeln!(f)?;
         }
         Ok(())
     }

@@ -233,9 +233,9 @@ can use the same command to set an authentication token for the API.
                         })
                         .collect::<Vec<_>>();
                     chains_of_type.insert(0, table_titles.clone());
-                    let t = Table::from(chains_of_type);
-                    let title = format!("{} chains", chain_type.label()).as_str().to_title();
-                    println!("{title}\n{t}\n");
+                    let mut t = Table::from(chains_of_type);
+                    t.title = format!("{} chains", chain_type.label());
+                    println!("{t}");
                 }
                 Ok(())
             }
@@ -335,10 +335,6 @@ alias, if set.
                 }
                 for chain_type in CHAIN_TYPES {
                     if let Some(accounts) = self.config.accounts.get(chain_type) {
-                        let title = format!("{} accounts", chain_type.label())
-                            .as_str()
-                            .to_title();
-                        println!("{title}");
                         let table_titles = Vec::from([
                             "Short address".to_string(),
                             "Full address".to_string(),
@@ -355,8 +351,9 @@ alias, if set.
                             })
                             .collect::<Vec<_>>();
                         rows.insert(0, table_titles);
-                        let t = Table::from(rows);
-                        println!("{t}\n");
+                        let mut t = Table::from(rows);
+                        t.title = format!("{} accounts", chain_type.label());
+                        println!("{t}");
                     }
                 }
                 Ok(())
@@ -438,11 +435,9 @@ alias, if set.
                         })
                         .collect::<Vec<_>>();
                     tokens.insert(0, table_titles);
-                    let t = Table::from(tokens);
-                    let title = format!("{} tokens", chain.properties.name)
-                        .as_str()
-                        .to_title();
-                    println!("{title}\n{t}\n");
+                    let mut t = Table::from(tokens);
+                    t.title = format!("{} tokens", chain.properties.name);
+                    println!("{t}");
                 }
                 Ok(())
             }
@@ -748,9 +743,9 @@ alias, if set.
                     })
                     .collect::<Vec<_>>();
                 rows.insert(0, table_titles);
-                let t = Table::from(rows);
-                let title = "Balances".to_title();
-                println!("\n{title}\n{t}\n");
+                let mut t = Table::from(rows);
+                t.title = "Balances".to_string();
+                println!("{t}");
                 println!(
                     "Holdings: {}\nBalance: {} USD",
                     relevant_balances.len(),
