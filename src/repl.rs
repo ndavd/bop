@@ -71,28 +71,26 @@ impl Repl {
             None => true,
         }
     }
-    fn enabled_chains(&self) -> Vec<Chain> {
+    fn enabled_chains(&self) -> impl Iterator<Item = &Chain> {
         self.chains
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|c| self.is_chain_enabled(&c.properties.get_id()))
-            .collect::<Vec<_>>()
     }
-    fn enabled_chains_of_type(&self, chain_type: &ChainType) -> Vec<Chain> {
-        self.chains
-            .clone()
-            .into_iter()
-            .filter(|c| {
-                c.chain_type == *chain_type && self.is_chain_enabled(&c.properties.get_id())
-            })
-            .collect()
+    fn enabled_chains_of_type<'a>(
+        &'a self,
+        chain_type: &'a ChainType,
+    ) -> impl Iterator<Item = &'a Chain> + 'a {
+        self.chains.iter().filter(move |c| {
+            c.chain_type == *chain_type && self.is_chain_enabled(&c.properties.get_id())
+        })
     }
-    fn chains_of_type(&self, chain_type: &ChainType) -> Vec<Chain> {
+    fn chains_of_type<'a>(
+        &'a self,
+        chain_type: &'a ChainType,
+    ) -> impl Iterator<Item = &'a Chain> + 'a {
         self.chains
-            .clone()
-            .into_iter()
-            .filter(|c| c.chain_type == *chain_type)
-            .collect()
+            .iter()
+            .filter(move |c| c.chain_type == *chain_type)
     }
     fn find_chain(&self, chain_name: &str) -> Result<&Chain, String> {
         match self
@@ -225,8 +223,7 @@ can use the same command to set an authentication token for the API.
                     Vec::from(["ID".to_string(), "Name".to_string(), "Enabled".to_string()]);
                 for chain_type in CHAIN_TYPES {
                     let mut chains_of_type = self
-                        .chains_of_type(&chain_type)
-                        .iter()
+                        .chains_of_type(chain_type)
                         .map(|c| {
                             Vec::from([
                                 c.properties.get_id(),
@@ -286,7 +283,6 @@ can use the same command to set an authentication token for the API.
                         let chain_type = ChainType::from_str(arg)?;
                         let chain_ids_of_type = self
                             .chains_of_type(&chain_type)
-                            .iter()
                             .map(|c| c.properties.get_id())
                             .collect::<Vec<_>>();
                         let new_state =
@@ -395,7 +391,12 @@ alias, if set.
                 }
                 let chain_type = ChainType::from_str(command_parts[1])?;
                 let addr = command_parts[2];
-                let address = match self.chains_of_type(&chain_type)[0].parse_wallet_address(addr) {
+                let address = match self
+                    .chains_of_type(&chain_type)
+                    .next()
+                    .unwrap()
+                    .parse_wallet_address(addr)
+                {
                     Some(x) => x,
                     None => {
                         return Err(format!(
@@ -568,7 +569,6 @@ alias, if set.
                     .into_iter()
                     .flat_map(|(chain_type, account)| {
                         self.enabled_chains_of_type(chain_type)
-                            .iter()
                             .map(|chain| (chain.clone(), account.clone()))
                             .collect::<Vec<_>>()
                     })
@@ -589,7 +589,6 @@ alias, if set.
 
                 let accounts_natives = self
                     .enabled_chains()
-                    .iter()
                     .flat_map(|chain| {
                         self.config
                             .accounts
