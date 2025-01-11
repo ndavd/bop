@@ -1,8 +1,10 @@
+mod data_file;
 mod default;
 
-use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 use age::secrecy::{ExposeSecret, SecretString};
+use data_file::{data_file_exists, read_data_file, write_data_file};
 use futures::{stream, StreamExt};
 use itertools::Itertools;
 use num_bigint::BigUint;
@@ -11,15 +13,12 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    chain::{Chain, ChainOps, ChainType, Token},
+    chain::{Chain, ChainOps, ChainType, Token, CHAIN_TYPES},
     dexscreener,
     utils::{retry::handle_retry_indexed, table::Table, text::StylizedText},
 };
 
-static DATA_FILE: &str = ".bop-data";
 static BOOK_OF_PROFITS: &str = "Book of Profits";
-
-static CHAIN_TYPES: &[ChainType; 3] = &[ChainType::Evm, ChainType::Solana, ChainType::Ton];
 
 // TODO: These hashmaps aren't really needed, just use vectors of tuples
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -804,30 +803,8 @@ alias, if set.
         self.secret = Some(pass);
         Ok(())
     }
-    fn get_data_file_path() -> Result<PathBuf, String> {
-        let home = match dirs::config_dir() {
-            Some(x) => x,
-            None => return Err("Could not find config directory".to_string()),
-        };
-        Ok(home.join(DATA_FILE))
-    }
-    fn data_file_exists() -> Result<bool, String> {
-        Ok(std::fs::metadata(Repl::get_data_file_path()?).is_ok())
-    }
-    fn read_data_file() -> Result<Vec<u8>, String> {
-        match std::fs::read(Repl::get_data_file_path()?) {
-            Ok(x) => Ok(x),
-            _ => return Err("Could not read data file".to_string()),
-        }
-    }
-    fn write_data_file(contents: &[u8]) -> Result<(), String> {
-        match std::fs::write(Repl::get_data_file_path()?, contents) {
-            Ok(_) => Ok(()),
-            _ => Err("Could not write data file".to_string()),
-        }
-    }
     fn read_config_from_data_file(&mut self, keep_trying: bool) -> Result<ReplConfig, String> {
-        let data = Self::read_data_file()?;
+        let data = read_data_file()?;
         if age::Decryptor::new(data.as_slice()).is_ok() {
             let mut contents: Option<Vec<u8>> = None;
             while contents.is_none() {
@@ -900,12 +877,12 @@ alias, if set.
             };
             contents = encrypted_contents;
         };
-        Repl::write_data_file(contents.as_slice())?;
+        write_data_file(contents.as_slice())?;
         self.sync_rpcs();
         Ok(())
     }
     fn startup_config(&mut self) -> Result<(), String> {
-        if !Self::data_file_exists()? {
+        if !data_file_exists()? {
             self.create_password()?;
             return self.store_config_to_data_file();
         }

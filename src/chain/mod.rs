@@ -69,6 +69,8 @@ impl ChainProperties {
     }
 }
 
+pub static CHAIN_TYPES: &[ChainType; 3] = &[ChainType::Evm, ChainType::Solana, ChainType::Ton];
+
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub enum ChainType {
     Evm,
