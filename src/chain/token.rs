@@ -18,9 +18,9 @@ impl Token {
             decimals,
         }
     }
-    pub async fn new(address: String, chain: &Chain) -> Option<Self> {
-        let decimals = chain.get_token_decimals(address.clone()).await?;
-        let symbol = chain.get_token_symbol(address.clone()).await?;
+    pub async fn new(address: &str, chain: &Chain) -> Option<Self> {
+        let decimals = chain.get_token_decimals(address).await?;
+        let symbol = chain.get_token_symbol(address).await?;
         Some(Self {
             symbol,
             address: chain.parse_token_address(&address)?,

@@ -468,7 +468,7 @@ alias, if set.
                                 ))
                             }
                         };
-                        let token = match Token::new(token_address, &chain).await {
+                        let token = match Token::new(&token_address, &chain).await {
                             Some(x) => x,
                             None => return Err("Could not fetch token info".to_string()),
                         };
@@ -516,14 +516,11 @@ alias, if set.
                                 chain.chain_type.label(),
                             ));
                         }
-                        let tokens_found = match chain
-                            .scan_for_tokens(account_address.to_string())
-                            .await
-                            .to_result()?
-                        {
-                            Some(x) => x,
-                            None => return Err("Could not fetch account holdings".to_string()),
-                        };
+                        let tokens_found =
+                            match chain.scan_for_tokens(account_address).await.to_result()? {
+                                Some(x) => x,
+                                None => return Err("Could not fetch account holdings".to_string()),
+                            };
                         let new_tokens = tokens_found
                             .into_iter()
                             .filter_map(|t| {
@@ -594,7 +591,7 @@ alias, if set.
 
                 let results_natives = stream::iter(accounts_natives.iter().enumerate())
                     .map(async |(i, (chain, address, _))| {
-                        let task = || chain.get_native_token_balance(address.to_string());
+                        let task = || chain.get_native_token_balance(address);
                         handle_retry_indexed(i, task).await
                     })
                     .buffer_unordered(20)
@@ -603,7 +600,7 @@ alias, if set.
 
                 let results_not_supported = stream::iter(accounts_not_supported.iter().enumerate())
                     .map(async |(i, (chain, token, address, _))| {
-                        let task = || chain.get_token_balance(token, address.to_string());
+                        let task = || chain.get_token_balance(token, address);
                         handle_retry_indexed(i, task).await
                     })
                     .buffer_unordered(20)
@@ -615,7 +612,7 @@ alias, if set.
                         let task = async || {
                             (
                                 chain
-                                    .get_holdings_balance(address.to_string())
+                                    .get_holdings_balance(address)
                                     .await
                                     .to_result()
                                     .unwrap(),
@@ -674,7 +671,7 @@ alias, if set.
 
                 let tokens_to_fetch_price = balances
                     .iter()
-                    .map(|b| b.token.address.clone())
+                    .map(|b| b.token.address.as_str())
                     .unique()
                     .collect::<Vec<_>>();
                 println!("Fetching {} token prices...", tokens_to_fetch_price.len());

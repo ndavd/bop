@@ -58,7 +58,7 @@ impl EvmChain {
 }
 
 impl ChainOps for EvmChain {
-    async fn get_native_token_balance(&self, address: String) -> (Option<BigUint>, Option<f32>) {
+    async fn get_native_token_balance(&self, address: &str) -> (Option<BigUint>, Option<f32>) {
         let (balance_hex, wait_time) = self
             .rpc_call("eth_getBalance", json!([address, "latest"]))
             .await;
@@ -70,7 +70,7 @@ impl ChainOps for EvmChain {
     async fn get_token_balance(
         &self,
         token: &Token,
-        address: String,
+        address: &str,
     ) -> (Option<BigUint>, Option<f32>) {
         let params = json!([
             {
@@ -85,13 +85,10 @@ impl ChainOps for EvmChain {
             wait_time,
         )
     }
-    async fn get_holdings_balance(
-        &self,
-        _address: String,
-    ) -> SupportOption<Vec<(String, BigUint)>> {
+    async fn get_holdings_balance(&self, _address: &str) -> SupportOption<Vec<(String, BigUint)>> {
         SupportOption::Unsupported
     }
-    async fn get_token_decimals(&self, token_address: String) -> Option<usize> {
+    async fn get_token_decimals(&self, token_address: &str) -> Option<usize> {
         let params = json!([
             {
                 "to": token_address,
@@ -104,7 +101,7 @@ impl ChainOps for EvmChain {
             .to_usize()
             .into()
     }
-    async fn scan_for_tokens(&self, _address: String) -> SupportOption<Vec<Token>> {
+    async fn scan_for_tokens(&self, _address: &str) -> SupportOption<Vec<Token>> {
         SupportOption::Unsupported
     }
     fn parse_wallet_address(&self, address: &str) -> Option<String> {

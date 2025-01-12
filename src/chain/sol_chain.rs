@@ -98,7 +98,7 @@ struct SolGetTokenAccountsResponse {
 }
 
 impl ChainOps for SolChain {
-    async fn get_native_token_balance(&self, address: String) -> (Option<BigUint>, Option<f32>) {
+    async fn get_native_token_balance(&self, address: &str) -> (Option<BigUint>, Option<f32>) {
         let (balance, wait_time) = self
             .rpc_call::<SolGetBalanceResponse>("getBalance", json!([address]))
             .await;
@@ -107,7 +107,7 @@ impl ChainOps for SolChain {
     async fn get_token_balance(
         &self,
         token: &Token,
-        address: String,
+        address: &str,
     ) -> (Option<BigUint>, Option<f32>) {
         let params = json!([
             address,
@@ -125,13 +125,10 @@ impl ChainOps for SolChain {
             wait_time,
         )
     }
-    async fn get_holdings_balance(
-        &self,
-        _address: String,
-    ) -> SupportOption<Vec<(String, BigUint)>> {
+    async fn get_holdings_balance(&self, _address: &str) -> SupportOption<Vec<(String, BigUint)>> {
         SupportOption::Unsupported
     }
-    async fn get_token_decimals(&self, token_address: String) -> Option<usize> {
+    async fn get_token_decimals(&self, token_address: &str) -> Option<usize> {
         let params = json!([
             token_address,
             { "encoding": "jsonParsed" },
@@ -143,7 +140,7 @@ impl ChainOps for SolChain {
                 .decimals,
         )
     }
-    async fn scan_for_tokens(&self, address: String) -> SupportOption<Vec<Token>> {
+    async fn scan_for_tokens(&self, address: &str) -> SupportOption<Vec<Token>> {
         let params = json!([
             address,
             { "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
@@ -155,7 +152,10 @@ impl ChainOps for SolChain {
             .0
             .to_supported()?
             .value;
-        let token_addresses = tokens_data.iter().map(|token| token.mint.clone()).collect();
+        let token_addresses = tokens_data
+            .iter()
+            .map(|token| token.mint.as_str())
+            .collect();
         let pairs = dexscreener::get_pairs(token_addresses)
             .await
             .to_supported()?;

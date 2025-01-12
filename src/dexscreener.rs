@@ -50,7 +50,7 @@ async fn get_pairs_request(url: Url) -> Option<Vec<Pair>> {
         .or(Some(Vec::new()))
 }
 
-pub async fn get_pairs(tokens: Vec<String>) -> Option<Vec<Pair>> {
+pub async fn get_pairs(tokens: Vec<&str>) -> Option<Vec<Pair>> {
     let pairs = stream::iter(tokens.clone())
         .map(async |t| {
             let url =

@@ -53,19 +53,19 @@ impl Chain {
 }
 
 pub trait ChainOps {
-    async fn get_native_token_balance(&self, address: String) -> (Option<BigUint>, Option<f32>);
+    async fn get_native_token_balance(&self, address: &str) -> (Option<BigUint>, Option<f32>);
     async fn get_token_balance(
         &self,
         token: &Token,
-        address: String,
+        address: &str,
     ) -> (Option<BigUint>, Option<f32>);
-    async fn get_token_decimals(&self, token_address: String) -> Option<usize>;
-    async fn get_token_symbol(&self, token_address: String) -> Option<String> {
+    async fn get_token_decimals(&self, token_address: &str) -> Option<usize>;
+    async fn get_token_symbol(&self, token_address: &str) -> Option<String> {
         let pairs = dexscreener::get_pairs(vec![token_address]).await?;
         (pairs.len() != 0).then(|| pairs[0].base_token.symbol.clone())
     }
-    async fn get_holdings_balance(&self, address: String) -> SupportOption<Vec<(String, BigUint)>>;
-    async fn scan_for_tokens(&self, address: String) -> SupportOption<Vec<Token>>;
+    async fn get_holdings_balance(&self, address: &str) -> SupportOption<Vec<(String, BigUint)>>;
+    async fn scan_for_tokens(&self, address: &str) -> SupportOption<Vec<Token>>;
     fn parse_wallet_address(&self, address: &str) -> Option<String>;
     fn parse_token_address(&self, address: &str) -> Option<String> {
         self.parse_wallet_address(address)
@@ -73,7 +73,7 @@ pub trait ChainOps {
 }
 
 impl ChainOps for Chain {
-    async fn get_native_token_balance(&self, address: String) -> (Option<BigUint>, Option<f32>) {
+    async fn get_native_token_balance(&self, address: &str) -> (Option<BigUint>, Option<f32>) {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).get_native_token_balance(address).await,
             ChainType::Solana => SolChain::from(self).get_native_token_balance(address).await,
@@ -83,7 +83,7 @@ impl ChainOps for Chain {
     async fn get_token_balance(
         &self,
         token: &Token,
-        address: String,
+        address: &str,
     ) -> (Option<BigUint>, Option<f32>) {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).get_token_balance(token, address).await,
@@ -91,28 +91,28 @@ impl ChainOps for Chain {
             ChainType::Ton => TonChain::from(self).get_token_balance(token, address).await,
         }
     }
-    async fn get_holdings_balance(&self, address: String) -> SupportOption<Vec<(String, BigUint)>> {
+    async fn get_holdings_balance(&self, address: &str) -> SupportOption<Vec<(String, BigUint)>> {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).get_holdings_balance(address).await,
             ChainType::Solana => SolChain::from(self).get_holdings_balance(address).await,
             ChainType::Ton => TonChain::from(self).get_holdings_balance(address).await,
         }
     }
-    async fn get_token_decimals(&self, token_address: String) -> Option<usize> {
+    async fn get_token_decimals(&self, token_address: &str) -> Option<usize> {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).get_token_decimals(token_address).await,
             ChainType::Solana => SolChain::from(self).get_token_decimals(token_address).await,
             ChainType::Ton => TonChain::from(self).get_token_decimals(token_address).await,
         }
     }
-    async fn get_token_symbol(&self, token_address: String) -> Option<String> {
+    async fn get_token_symbol(&self, token_address: &str) -> Option<String> {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).get_token_symbol(token_address).await,
             ChainType::Solana => SolChain::from(self).get_token_symbol(token_address).await,
             ChainType::Ton => TonChain::from(self).get_token_symbol(token_address).await,
         }
     }
-    async fn scan_for_tokens(&self, address: String) -> SupportOption<Vec<Token>> {
+    async fn scan_for_tokens(&self, address: &str) -> SupportOption<Vec<Token>> {
         match self.chain_type {
             ChainType::Evm => EvmChain::from(self).scan_for_tokens(address).await,
             ChainType::Solana => SolChain::from(self).scan_for_tokens(address).await,
