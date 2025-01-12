@@ -24,21 +24,20 @@ use crate::{
 
 static BOOK_OF_PROFITS: &str = "Book of Profits";
 
-// TODO: These hashmaps aren't really needed, just use vectors of tuples
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct ReplConfig {
-    /// Map of chain-type to account address and optional alias
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    accounts: HashMap<ChainType, Vec<(String, Option<String>)>>,
+    /// Vec of chain-type, account address and optional alias
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    accounts: Vec<(ChainType, String, Option<String>)>,
+    /// Vec of chain-id and token
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    tokens: Vec<(String, Token)>,
     /// Map of chain-id to custom rpc
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     rpcs: HashMap<String, String>,
     /// Map of chain-id to enabled
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     chains_enabled: HashMap<String, bool>,
-    /// Map of chain-id to tokens
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    tokens: HashMap<String, Vec<Token>>,
 }
 
 impl Display for ReplConfig {
@@ -70,24 +69,23 @@ struct ReplBalanceEntry {
 }
 
 impl Repl {
-    fn is_chain_enabled(&self, chain_name: &str) -> bool {
-        match self.config.chains_enabled.get(chain_name) {
+    fn is_chain_enabled(&self, chain: &Chain) -> bool {
+        let chain_id = chain.properties.get_id();
+        match self.config.chains_enabled.get(&chain_id) {
             Some(x) => *x,
             None => true,
         }
     }
     fn enabled_chains(&self) -> impl Iterator<Item = &Chain> {
-        self.chains
-            .iter()
-            .filter(|c| self.is_chain_enabled(&c.properties.get_id()))
+        self.chains.iter().filter(|c| self.is_chain_enabled(c))
     }
     fn enabled_chains_of_type<'a>(
         &'a self,
         chain_type: &'a ChainType,
     ) -> impl Iterator<Item = &'a Chain> + 'a {
-        self.chains.iter().filter(move |c| {
-            c.chain_type == *chain_type && self.is_chain_enabled(&c.properties.get_id())
-        })
+        self.chains
+            .iter()
+            .filter(move |c| c.chain_type == *chain_type && self.is_chain_enabled(c))
     }
     fn chains_of_type<'a>(
         &'a self,
@@ -96,6 +94,25 @@ impl Repl {
         self.chains
             .iter()
             .filter(move |c| c.chain_type == *chain_type)
+    }
+    fn accounts_of_type<'a>(
+        &'a self,
+        chain_type: &'a ChainType,
+    ) -> impl Iterator<Item = &'a (ChainType, String, Option<String>)> + 'a {
+        self.config
+            .accounts
+            .iter()
+            .filter(move |(c_type, _, _)| c_type == chain_type)
+    }
+    fn tokens_of_chain<'a>(
+        &'a self,
+        chain: &'a Chain,
+    ) -> impl Iterator<Item = &'a (String, Token)> {
+        let chain_id = chain.properties.get_id();
+        self.config
+            .tokens
+            .iter()
+            .filter(move |(c_id, _)| *c_id == chain_id)
     }
     fn find_chain(&self, chain_name: &str) -> Result<&Chain, String> {
         match self
@@ -110,19 +127,14 @@ impl Repl {
             )),
         }
     }
-    fn find_account_address(&self, account: &str) -> Result<(ChainType, String), String> {
+    fn find_account_address(&self, account: &str) -> Result<(&ChainType, &String), String> {
         match self
             .config
             .accounts
             .iter()
-            .flat_map(|(c, a)| {
-                a.iter()
-                    .map(|a| (c, a.0.clone(), a.1.clone()))
-                    .collect::<Vec<_>>()
-            })
-            .find_map(|a| {
-                (a.1 == account || a.2.is_some() && a.2.unwrap() == account)
-                    .then(|| (a.0.clone(), a.1))
+            .find_map(|(chain_type, address, alias)| {
+                (account == address || alias.clone().is_some_and(|alias| alias == account))
+                    .then(|| (chain_type, address))
             }) {
             Some(x) => Ok(x),
             _ => Err(format!("Found no account corresponding to {:?}", account)),
@@ -133,11 +145,11 @@ impl Repl {
         let last = &a[a.len() - 5..].to_string();
         format!("{first}..{last}")
     }
-    fn format_account(a: &(String, Option<String>)) -> String {
-        if a.1.is_some() {
-            return a.1.clone().unwrap();
+    fn format_account(address: &String, alias: &Option<String>) -> String {
+        if alias.is_some() {
+            return alias.clone().unwrap();
         }
-        Self::format_address(&a.0)
+        Self::format_address(address)
     }
     fn get_unknown_option_err(s: &str) -> Result<(), String> {
         Err(format!("Unknown option: {s:?}"))
@@ -233,7 +245,7 @@ can use the same command to set an authentication token for the API.
                             Vec::from([
                                 c.properties.get_id(),
                                 c.properties.name.clone(),
-                                self.is_chain_enabled(&c.properties.get_id()).to_string(),
+                                self.is_chain_enabled(c).to_string(),
                             ])
                         })
                         .collect::<Vec<_>>();
@@ -249,7 +261,7 @@ can use the same command to set an authentication token for the API.
                 println!(
                     "{} - {}",
                     chain.properties,
-                    if self.is_chain_enabled(&chain.properties.get_id()) {
+                    if self.is_chain_enabled(chain) {
                         "ENABLED".to_colored()
                     } else {
                         "DISABLED".to_string()
@@ -272,11 +284,10 @@ can use the same command to set an authentication token for the API.
                     "toggle" => {
                         let chain = self.find_chain(arg)?;
                         let chain_name = chain.properties.name.clone();
-                        let chain_id = chain.properties.get_id();
-                        let new_state = !self.is_chain_enabled(&chain_id);
+                        let new_state = !self.is_chain_enabled(chain);
                         self.config
                             .chains_enabled
-                            .insert(chain_id.clone(), new_state);
+                            .insert(chain.properties.get_id(), new_state);
                         self.store_config_to_data_file()?;
                         println!(
                             "{chain_name} chain set to {}",
@@ -286,15 +297,14 @@ can use the same command to set an authentication token for the API.
                     }
                     "toggle-all" => {
                         let chain_type = ChainType::from_str(arg)?;
-                        let chain_ids_of_type = self
+                        let new_state = !self
                             .chains_of_type(&chain_type)
-                            .map(|c| c.properties.get_id())
-                            .collect::<Vec<_>>();
-                        let new_state =
-                            !chain_ids_of_type.iter().all(|id| self.is_chain_enabled(id));
-                        for chain_id in chain_ids_of_type {
-                            self.config.chains_enabled.insert(chain_id, new_state);
-                        }
+                            .all(|c| self.is_chain_enabled(c));
+                        self.config.chains_enabled.extend(
+                            self.chains_of_type(&chain_type)
+                                .map(|c| (c.properties.get_id(), new_state))
+                                .collect::<Vec<_>>(),
+                        );
                         self.store_config_to_data_file()?;
                         println!(
                             "All chains of type {} set to {}",
@@ -339,27 +349,30 @@ alias, if set.
                     println!("You have no accounts");
                 }
                 for chain_type in CHAIN_TYPES {
-                    if let Some(accounts) = self.config.accounts.get(chain_type) {
-                        let table_titles = Vec::from([
+                    let mut rows = self
+                        .accounts_of_type(chain_type)
+                        .map(|(_, address, alias)| {
+                            Vec::from([
+                                Repl::format_address(address),
+                                address.to_string(),
+                                alias.clone().unwrap_or("-".to_string()),
+                            ])
+                        })
+                        .collect::<Vec<_>>();
+                    if rows.len() == 0 {
+                        continue;
+                    }
+                    rows.insert(
+                        0,
+                        Vec::from([
                             "Short address".to_string(),
                             "Full address".to_string(),
                             "Alias".to_string(),
-                        ]);
-                        let mut rows = accounts
-                            .iter()
-                            .map(|(address, alias)| {
-                                Vec::from([
-                                    Repl::format_address(address),
-                                    address.to_string(),
-                                    alias.clone().unwrap_or("-".to_string()),
-                                ])
-                            })
-                            .collect::<Vec<_>>();
-                        rows.insert(0, table_titles);
-                        let mut t = Table::from(rows);
-                        t.title = format!("{} accounts", chain_type.label());
-                        println!("{t}");
-                    }
+                        ]),
+                    );
+                    let mut t = Table::from(rows);
+                    t.title = format!("{} accounts", chain_type.label());
+                    println!("{t}");
                 }
                 Ok(())
             }
@@ -373,16 +386,10 @@ alias, if set.
                 let index = self
                     .config
                     .accounts
-                    .get(&chain_type)
-                    .unwrap()
                     .iter()
-                    .position(|a| a.0 == address)
+                    .position(|a| a.0 == *chain_type && a.1 == *address)
                     .unwrap();
-                self.config
-                    .accounts
-                    .get_mut(&chain_type)
-                    .unwrap()
-                    .remove(index);
+                self.config.accounts.remove(index);
                 self.store_config_to_data_file()?;
                 Ok(())
             }
@@ -408,12 +415,7 @@ alias, if set.
                     }
                 };
                 let alias = (command_parts.len() == 4).then(|| command_parts[3].to_string());
-                let new_acc = (address, alias);
-                if let Some(accounts) = self.config.accounts.get_mut(&chain_type) {
-                    accounts.push(new_acc);
-                } else {
-                    self.config.accounts.insert(chain_type, vec![new_acc]);
-                }
+                self.config.accounts.push((chain_type, address, alias));
                 self.store_config_to_data_file()?;
                 Ok(())
             }
@@ -426,20 +428,24 @@ alias, if set.
                 if self.config.tokens.is_empty() {
                     println!("You have no tokens");
                 }
-                for (chain_id, chain_tokens) in &self.config.tokens {
-                    let chain = self.find_chain(&chain_id)?;
-                    let table_titles = Vec::from([
-                        "Symbol".to_string(),
-                        "Address".to_string(),
-                        "Decimals".to_string(),
-                    ]);
-                    let mut tokens = chain_tokens
-                        .iter()
-                        .map(|t| {
+                for chain in &self.chains {
+                    let mut tokens = self
+                        .tokens_of_chain(chain)
+                        .map(|(_, t)| {
                             Vec::from([t.symbol.clone(), t.address.clone(), t.decimals.to_string()])
                         })
                         .collect::<Vec<_>>();
-                    tokens.insert(0, table_titles);
+                    if tokens.len() == 0 {
+                        continue;
+                    }
+                    tokens.insert(
+                        0,
+                        Vec::from([
+                            "Symbol".to_string(),
+                            "Address".to_string(),
+                            "Decimals".to_string(),
+                        ]),
+                    );
                     let mut t = Table::from(tokens);
                     t.title = format!("{} tokens", chain.properties.name);
                     println!("{t}");
@@ -467,21 +473,13 @@ alias, if set.
                             None => return Err("Could not fetch token info".to_string()),
                         };
                         if self
-                            .config
-                            .tokens
-                            .get(chain_id)
-                            .unwrap_or(&vec![])
-                            .iter()
-                            .find(|t| t.address == token.address)
+                            .tokens_of_chain(chain)
+                            .find(|(_, t)| t.address == token.address)
                             .is_some()
                         {
                             return Err("Token already added".to_string());
                         }
-                        if let Some(tokens) = self.config.tokens.get_mut(chain_id) {
-                            tokens.push(token);
-                        } else {
-                            self.config.tokens.insert(chain_id.to_string(), vec![token]);
-                        }
+                        self.config.tokens.push((chain_id.to_string(), token));
                         self.store_config_to_data_file()
                     }
                     "rm" => {
@@ -494,9 +492,13 @@ alias, if set.
                                 ))
                             }
                         };
-                        let chain_tokens = self.config.tokens.get_mut(chain_id).unwrap();
-                        match chain_tokens.iter().position(|t| t.address == token_address) {
-                            Some(x) => chain_tokens.remove(x),
+                        match self
+                            .config
+                            .tokens
+                            .iter()
+                            .position(|(c_id, t)| c_id == chain_id && t.address == token_address)
+                        {
+                            Some(x) => self.config.tokens.remove(x),
                             None => {
                                 return Err(format!(
                                     "Could not find token with address {:?}",
@@ -508,37 +510,31 @@ alias, if set.
                     }
                     "scan" => {
                         let (chain_type, account_address) = self.find_account_address(addr)?;
-                        if chain_type != chain.chain_type {
+                        if *chain_type != chain.chain_type {
                             return Err(format!(
                                 "Account does not belong to the {} chain-type",
                                 chain.chain_type.label(),
                             ));
                         }
-                        let tokens_found =
-                            match chain.scan_for_tokens(account_address).await.to_result()? {
-                                Some(x) => x,
-                                None => return Err("Could not fetch account holdings".to_string()),
-                            };
-                        let current_tokens = self
-                            .config
-                            .tokens
-                            .entry(chain_id.to_string())
-                            .or_insert(Vec::new());
+                        let tokens_found = match chain
+                            .scan_for_tokens(account_address.to_string())
+                            .await
+                            .to_result()?
+                        {
+                            Some(x) => x,
+                            None => return Err("Could not fetch account holdings".to_string()),
+                        };
                         let new_tokens = tokens_found
                             .into_iter()
-                            .filter(|t| {
-                                current_tokens
-                                    .iter()
-                                    .find(|c| c.address == t.address)
+                            .filter_map(|t| {
+                                self.tokens_of_chain(chain)
+                                    .find(|(_, ct)| ct.address == t.address)
                                     .is_none()
+                                    .then(|| (chain_id.to_string(), t))
                             })
                             .collect::<Vec<_>>();
                         let new_tokens_len = new_tokens.len();
-                        self.config
-                            .tokens
-                            .get_mut(chain_id)
-                            .unwrap()
-                            .extend(new_tokens);
+                        self.config.tokens.extend(new_tokens);
                         self.store_config_to_data_file()?;
                         if new_tokens_len == 0 {
                             println!("Found no new tokens");
@@ -556,48 +552,34 @@ alias, if set.
     async fn handle_balance(&mut self, command_parts: &[&str]) -> Result<(), String> {
         match command_parts.len() {
             0 => {
-                // TODO: Refactor; this is a mess, but it works
-                let accounts = self
+                // TODO: Remove the partition part by making use of the `SupportOption`
+                // and stream everything together
+
+                // Partition between the accounts that support `get_holdings_balance` and those
+                // that do not
+                let (accounts_supported, accounts_not_supported): (Vec<_>, Vec<_>) = self
                     .config
                     .accounts
                     .iter()
-                    .flat_map(|(chain_type, accounts)| {
-                        accounts.iter().map(|a| (chain_type, a)).collect::<Vec<_>>()
+                    .flat_map(|(chain_type, address, alias)| {
+                        self.enabled_chains_of_type(&chain_type)
+                            .map(move |chain| (chain, address, alias))
                     })
-                    .collect::<Vec<_>>();
-                let (accounts_supported, accounts_not_supported): (Vec<_>, Vec<_>) = accounts
-                    .into_iter()
-                    .flat_map(|(chain_type, account)| {
-                        self.enabled_chains_of_type(chain_type)
-                            .map(|chain| (chain.clone(), account.clone()))
-                            .collect::<Vec<_>>()
-                    })
-                    .partition(|x| x.0.chain_type == ChainType::Ton);
+                    .partition(|(chain, _, _)| chain.chain_type == ChainType::Ton);
 
                 let accounts_not_supported = accounts_not_supported
                     .iter()
-                    .flat_map(|(chain, account)| {
-                        self.config
-                            .tokens
-                            .get(&chain.properties.get_id())
-                            .unwrap_or(&Vec::new())
-                            .iter()
-                            .map(|token| (chain.clone(), token.clone(), account.clone()))
-                            .collect::<Vec<_>>()
+                    .flat_map(|(chain, address, alias)| {
+                        self.tokens_of_chain(&chain)
+                            .map(move |(_, token)| (chain, token.clone(), address, alias))
                     })
                     .collect::<Vec<_>>();
 
                 let accounts_natives = self
                     .enabled_chains()
                     .flat_map(|chain| {
-                        self.config
-                            .accounts
-                            .get(&chain.chain_type)
-                            .unwrap_or(&Vec::new())
-                            .to_owned()
-                            .iter()
-                            .map(|account| (chain.clone(), account.clone()))
-                            .collect::<Vec<_>>()
+                        self.accounts_of_type(&chain.chain_type)
+                            .map(move |(_, address, alias)| (chain, address, alias))
                     })
                     .collect::<Vec<_>>();
 
@@ -611,8 +593,8 @@ alias, if set.
                 let mut balances: Vec<ReplBalanceEntry> = Vec::new();
 
                 let results_natives = stream::iter(accounts_natives.iter().enumerate())
-                    .map(async |(i, (chain, account))| {
-                        let task = || chain.get_native_token_balance(account.0.clone());
+                    .map(async |(i, (chain, address, _))| {
+                        let task = || chain.get_native_token_balance(address.to_string());
                         handle_retry_indexed(i, task).await
                     })
                     .buffer_unordered(20)
@@ -620,8 +602,8 @@ alias, if set.
                     .await;
 
                 let results_not_supported = stream::iter(accounts_not_supported.iter().enumerate())
-                    .map(async |(i, (chain, token, account))| {
-                        let task = || chain.get_token_balance(token, account.0.clone());
+                    .map(async |(i, (chain, token, address, _))| {
+                        let task = || chain.get_token_balance(token, address.to_string());
                         handle_retry_indexed(i, task).await
                     })
                     .buffer_unordered(20)
@@ -629,11 +611,11 @@ alias, if set.
                     .await;
 
                 let results_supported = stream::iter(accounts_supported.iter().enumerate())
-                    .map(async |(i, (chain, account))| {
+                    .map(async |(i, (chain, address, _))| {
                         let task = async || {
                             (
                                 chain
-                                    .get_holdings_balance(account.0.clone())
+                                    .get_holdings_balance(address.to_string())
                                     .await
                                     .to_result()
                                     .unwrap(),
@@ -646,57 +628,49 @@ alias, if set.
                     .collect::<Vec<_>>()
                     .await;
 
-                for (i, balance) in results_natives {
-                    let (chain, account) = &accounts_natives[i];
-                    let account_label = Repl::format_account(&account);
-                    if balance != BigUint::ZERO {
-                        balances.push(ReplBalanceEntry {
-                            account: account_label.clone(),
-                            chain: chain.properties.name.clone(),
-                            token: chain.properties.native_token.clone(),
-                            balance_native: balance,
-                            balance_usd: 0.0,
-                        });
-                    }
-                }
-                for (i, balance) in results_not_supported {
-                    let (chain, token, account) = &accounts_not_supported[i];
-                    let account_label = Repl::format_account(&account);
-                    if balance != BigUint::ZERO {
-                        balances.push(ReplBalanceEntry {
-                            account: account_label.clone(),
-                            chain: chain.properties.name.clone(),
-                            token: token.clone().clone(),
-                            balance_native: balance,
-                            balance_usd: 0.0,
-                        });
-                    }
-                }
-                for (i, account_holdings) in results_supported {
-                    let (chain, account) = &accounts_supported[i];
-                    let account_label = Repl::format_account(&account);
-                    let tokens_of_chain = self
-                        .config
-                        .tokens
-                        .get(&chain.properties.get_id())
-                        .unwrap_or(&Vec::new())
-                        .to_owned();
-                    for (token_address, balance) in account_holdings {
-                        let token = tokens_of_chain
-                            .iter()
-                            .find(|t| t.address == token_address)
-                            .unwrap();
-                        if balance != BigUint::ZERO {
-                            balances.push(ReplBalanceEntry {
+                balances.extend(results_natives.iter().filter_map(|(i, balance)| {
+                    let (chain, address, alias) = &accounts_natives[*i];
+                    let account_label = Repl::format_account(address, alias);
+                    (*balance != BigUint::ZERO).then(|| ReplBalanceEntry {
+                        account: account_label.clone(),
+                        chain: chain.properties.name.clone(),
+                        token: chain.properties.native_token.clone(),
+                        balance_native: balance.clone(),
+                        balance_usd: 0.0,
+                    })
+                }));
+
+                balances.extend(results_not_supported.iter().filter_map(|(i, balance)| {
+                    let (chain, token, address, alias) = &accounts_not_supported[*i];
+                    let account_label = Repl::format_account(address, alias);
+                    (*balance != BigUint::ZERO).then(|| ReplBalanceEntry {
+                        account: account_label.clone(),
+                        chain: chain.properties.name.clone(),
+                        token: token.clone(),
+                        balance_native: balance.clone(),
+                        balance_usd: 0.0,
+                    })
+                }));
+
+                balances.extend(results_supported.iter().flat_map(|(i, account_holdings)| {
+                    let (chain, address, alias) = &accounts_supported[*i];
+                    let account_label = Repl::format_account(address, alias);
+                    let mut tokens_of_chain = self.tokens_of_chain(chain);
+                    account_holdings
+                        .iter()
+                        .filter_map(move |(token_address, balance)| {
+                            let (_, token) = tokens_of_chain
+                                .find(|(_, t)| t.address == *token_address)
+                                .unwrap();
+                            (*balance != BigUint::ZERO).then(|| ReplBalanceEntry {
                                 account: account_label.clone(),
                                 chain: chain.properties.name.clone(),
                                 token: token.clone(),
-                                balance_native: balance,
+                                balance_native: balance.clone(),
                                 balance_usd: 0.0,
-                            });
-                        }
-                    }
-                }
+                            })
+                        })
+                }));
 
                 let tokens_to_fetch_price = balances
                     .iter()
@@ -726,15 +700,8 @@ alias, if set.
                 balances.sort_by(|a, b| b.balance_usd.total_cmp(&a.balance_usd));
                 let relevant_balances = balances
                     .iter()
-                    .filter(|balance| balance.balance_usd >= 0.1)
+                    .filter(|balance| balance.balance_usd >= 0.01)
                     .collect::<Vec<_>>();
-                let table_titles = Vec::from([
-                    "Account".to_string(),
-                    "Chain".to_string(),
-                    "Token".to_string(),
-                    "Balance".to_string(),
-                    "Balance (USD)".to_string(),
-                ]);
                 let mut rows = relevant_balances
                     .iter()
                     .map(|balance| {
@@ -747,7 +714,16 @@ alias, if set.
                         ])
                     })
                     .collect::<Vec<_>>();
-                rows.insert(0, table_titles);
+                rows.insert(
+                    0,
+                    Vec::from([
+                        "Account".to_string(),
+                        "Chain".to_string(),
+                        "Token".to_string(),
+                        "Balance".to_string(),
+                        "Balance (USD)".to_string(),
+                    ]),
+                );
                 let mut t = Table::from(rows);
                 t.title = "Balances".to_string();
                 println!("{t}");
