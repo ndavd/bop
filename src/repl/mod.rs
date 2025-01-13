@@ -19,7 +19,7 @@ use crate::{
         Chain, ChainOps,
     },
     dexscreener,
-    utils::{retry::handle_retry_indexed, table::Table, text::StylizedText},
+    utils::{retry::handle_retry_indexed, spinner::Spinner, table::Table, text::StylizedText},
 };
 
 static BOOK_OF_PROFITS: &str = "Book of Profits";
@@ -57,6 +57,7 @@ pub struct Repl {
     chains: Vec<Chain>,
     config: ReplConfig,
     secret: Option<SecretString>,
+    spinner: Spinner,
 }
 
 #[derive(Debug, Clone)]
@@ -580,19 +581,21 @@ alias, if set.
                     })
                     .collect::<Vec<_>>();
 
-                println!(
-                    "Querying {} balances...",
-                    accounts_supported.len()
-                        + accounts_not_supported.len()
-                        + accounts_natives.len()
-                );
+                let total_balances = accounts_supported.len()
+                    + accounts_not_supported.len()
+                    + accounts_natives.len();
+
+                self.spinner.set_total(total_balances);
+                self.spinner.start(Some("Querying balances..."));
 
                 let mut balances: Vec<ReplBalanceEntry> = Vec::new();
 
                 let results_natives = stream::iter(accounts_natives.iter().enumerate())
                     .map(async |(i, (chain, address, _))| {
                         let task = || chain.get_native_token_balance(address);
-                        handle_retry_indexed(i, task).await
+                        let result = handle_retry_indexed(i, task).await;
+                        self.spinner.inc_progress();
+                        result
                     })
                     .buffer_unordered(20)
                     .collect::<Vec<_>>()
@@ -601,7 +604,9 @@ alias, if set.
                 let results_not_supported = stream::iter(accounts_not_supported.iter().enumerate())
                     .map(async |(i, (chain, token, address, _))| {
                         let task = || chain.get_token_balance(token, address);
-                        handle_retry_indexed(i, task).await
+                        let result = handle_retry_indexed(i, task).await;
+                        self.spinner.inc_progress();
+                        result
                     })
                     .buffer_unordered(20)
                     .collect::<Vec<_>>()
@@ -619,11 +624,15 @@ alias, if set.
                                 None,
                             )
                         };
-                        handle_retry_indexed(i, task).await
+                        let result = handle_retry_indexed(i, task).await;
+                        self.spinner.inc_progress();
+                        result
                     })
                     .buffer_unordered(20)
                     .collect::<Vec<_>>()
                     .await;
+
+                self.spinner.stop();
 
                 balances.extend(results_natives.iter().filter_map(|(i, balance)| {
                     let (chain, address, alias) = &accounts_natives[*i];
@@ -674,7 +683,10 @@ alias, if set.
                     .map(|b| b.token.address.as_str())
                     .unique()
                     .collect::<Vec<_>>();
-                println!("Fetching {} token prices...", tokens_to_fetch_price.len());
+
+                self.spinner.set_total(tokens_to_fetch_price.len());
+                self.spinner.start(Some("Fetching token prices..."));
+
                 let pairs = match dexscreener::get_pairs(tokens_to_fetch_price).await {
                     Some(x) => x,
                     None => return Err(format!("Could not fetch tokens price")),
@@ -685,6 +697,8 @@ alias, if set.
                     Some((p.base_token.address.clone(), price))
                 })
                 .collect::<Vec<_>>();
+
+                self.spinner.stop();
 
                 for i in 0..balances.len() {
                     let balance = &mut balances[i];

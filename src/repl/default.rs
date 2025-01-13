@@ -1,4 +1,7 @@
-use crate::chain::{chain_type::ChainType, Chain};
+use crate::{
+    chain::{chain_type::ChainType, Chain},
+    utils::spinner::Spinner,
+};
 
 use super::Repl;
 
@@ -185,6 +188,7 @@ impl Default for Repl {
         Repl {
             chains: Vec::from([ton, sol, evm]).into_iter().flatten().collect(),
             config: super::ReplConfig::default(),
+            spinner: Spinner::new(),
             secret: None,
         }
     }
