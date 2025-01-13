@@ -70,12 +70,12 @@ cargo uninstall book-of-profits
 | `✅`                      | Manually add new token just by specifying chain and address                          |
 | `✅`                      | Show global balance                                                                  |
 | `✅`                      | Export raw configuration in plaintext                                                |
+| `✅`                      | Display spinner when loading                                                         |
 | `⚠️` Not supported in EVM | Scan for token holdings in account and automatically add them                        |
 | `❌`                      | Show balance by chain                                                                |
 | `❌`                      | Show balance by account                                                              |
 | `❌`                      | Automatically prune low liquidity tokens                                             |
 | `❌`                      | Cache balances in order to display them in other views without refetching everything |
-| `❌`                      | Display spinner when loading                                                         |
 | `❌`                      | Show total balance of a single token                                                 |
 | `❌`                      | Web client                                                                           |
 | `❌`                      | Centralized exchanges support                                                        |
