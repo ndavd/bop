@@ -3,7 +3,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use futures::{stream, StreamExt};
-use reqwest::{Client, StatusCode, Url};
+use reqwest::{Client, Url};
 use serde::Deserialize;
 
 use crate::utils::retry::handle_retry;
@@ -15,6 +15,13 @@ pub struct Token {
     pub address: String,
     pub name: String,
     pub symbol: String,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct PairLiquidity {
+    pub usd: Option<f64>,
+    pub base: f64,
+    pub quote: f64,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -29,6 +36,7 @@ pub struct Pair {
     pub price_native: String,
     pub price_usd: Option<String>,
     pub market_cap: Option<u64>,
+    pub liquidity: Option<PairLiquidity>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -38,10 +46,6 @@ struct GetPairsResponse {
 
 async fn get_pairs_request(url: Url) -> Option<Vec<Pair>> {
     let response = Client::new().get(url.clone()).send().await.ok()?;
-    let status = response.status();
-    if status != StatusCode::OK {
-        eprintln!("PRICES {status}");
-    }
     response
         .json::<GetPairsResponse>()
         .await
@@ -79,7 +83,21 @@ where
             pairs
                 .iter()
                 .filter(|pair| pair.base_token.address == *token)
-                .max_by_key(|pair| pair.market_cap.unwrap_or(0))
+                .max_by(|pair_a, pair_b| {
+                    let liq_a = pair_a
+                        .liquidity
+                        .clone()
+                        .unwrap_or_default()
+                        .usd
+                        .unwrap_or_default();
+                    let liq_b = pair_b
+                        .liquidity
+                        .clone()
+                        .unwrap_or_default()
+                        .usd
+                        .unwrap_or_default();
+                    liq_a.total_cmp(&liq_b)
+                })
                 .cloned()
         })
         .collect::<Vec<_>>();

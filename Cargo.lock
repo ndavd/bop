@@ -175,7 +175,7 @@ dependencies = [
 
 [[package]]
 name = "book-of-profits"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "age",
  "base58",
