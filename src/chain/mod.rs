@@ -72,65 +72,50 @@ pub trait ChainOps {
     }
 }
 
+macro_rules! chain_ops_method {
+    ($self:expr, $method:ident, $($args:expr),*; await) => {
+        match $self.chain_type {
+            ChainType::Evm => EvmChain::from($self).$method($($args),*).await,
+            ChainType::Solana => SolChain::from($self).$method($($args),*).await,
+            ChainType::Ton => TonChain::from($self).$method($($args),*).await,
+        }
+    };
+    ($self:expr, $method:ident, $($args:expr),*) => {
+        match $self.chain_type {
+            ChainType::Evm => EvmChain::from($self).$method($($args),*),
+            ChainType::Solana => SolChain::from($self).$method($($args),*),
+            ChainType::Ton => TonChain::from($self).$method($($args),*),
+        }
+    };
+}
+
 impl ChainOps for Chain {
     async fn get_native_token_balance(&self, address: &str) -> (Option<BigUint>, Option<f32>) {
-        match self.chain_type {
-            ChainType::Evm => EvmChain::from(self).get_native_token_balance(address).await,
-            ChainType::Solana => SolChain::from(self).get_native_token_balance(address).await,
-            ChainType::Ton => TonChain::from(self).get_native_token_balance(address).await,
-        }
+        chain_ops_method!(self, get_native_token_balance, address; await)
     }
     async fn get_token_balance(
         &self,
         token: &Token,
         address: &str,
     ) -> (Option<BigUint>, Option<f32>) {
-        match self.chain_type {
-            ChainType::Evm => EvmChain::from(self).get_token_balance(token, address).await,
-            ChainType::Solana => SolChain::from(self).get_token_balance(token, address).await,
-            ChainType::Ton => TonChain::from(self).get_token_balance(token, address).await,
-        }
+        chain_ops_method!(self, get_token_balance, token, address; await)
     }
     async fn get_holdings_balance(&self, address: &str) -> SupportOption<Vec<(String, BigUint)>> {
-        match self.chain_type {
-            ChainType::Evm => EvmChain::from(self).get_holdings_balance(address).await,
-            ChainType::Solana => SolChain::from(self).get_holdings_balance(address).await,
-            ChainType::Ton => TonChain::from(self).get_holdings_balance(address).await,
-        }
+        chain_ops_method!(self, get_holdings_balance, address; await)
     }
     async fn get_token_decimals(&self, token_address: &str) -> Option<usize> {
-        match self.chain_type {
-            ChainType::Evm => EvmChain::from(self).get_token_decimals(token_address).await,
-            ChainType::Solana => SolChain::from(self).get_token_decimals(token_address).await,
-            ChainType::Ton => TonChain::from(self).get_token_decimals(token_address).await,
-        }
+        chain_ops_method!(self, get_token_decimals, token_address; await)
     }
     async fn get_token_symbol(&self, token_address: &str) -> Option<String> {
-        match self.chain_type {
-            ChainType::Evm => EvmChain::from(self).get_token_symbol(token_address).await,
-            ChainType::Solana => SolChain::from(self).get_token_symbol(token_address).await,
-            ChainType::Ton => TonChain::from(self).get_token_symbol(token_address).await,
-        }
+        chain_ops_method!(self, get_token_symbol, token_address; await)
     }
     async fn scan_for_tokens(&self, address: &str) -> SupportOption<Vec<Token>> {
-        match self.chain_type {
-            ChainType::Evm => EvmChain::from(self).scan_for_tokens(address).await,
-            ChainType::Solana => SolChain::from(self).scan_for_tokens(address).await,
-            ChainType::Ton => TonChain::from(self).scan_for_tokens(address).await,
-        }
+        chain_ops_method!(self, scan_for_tokens, address; await)
     }
     fn parse_wallet_address(&self, address: &str) -> Option<String> {
-        match self.chain_type {
-            ChainType::Evm => EvmChain::from(self).parse_wallet_address(address),
-            ChainType::Solana => SolChain::from(self).parse_wallet_address(address),
-            ChainType::Ton => TonChain::from(self).parse_wallet_address(address),
-        }
+        chain_ops_method!(self, parse_wallet_address, address)
     }
     fn parse_token_address(&self, address: &str) -> Option<String> {
-        match self.chain_type {
-            ChainType::Evm => EvmChain::from(self).parse_token_address(address),
-            ChainType::Solana => SolChain::from(self).parse_token_address(address),
-            ChainType::Ton => TonChain::from(self).parse_token_address(address),
-        }
+        chain_ops_method!(self, parse_token_address, address)
     }
 }
