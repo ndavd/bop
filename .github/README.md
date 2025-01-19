@@ -7,6 +7,8 @@
 
 It is private - All data is locally encrypted.
 
+<img src='https://raw.githubusercontent.com/ndavd/bop/main/.github/demo.gif' />
+
 It features minimal and privacy preserving data fetching.\
 External requests made by `book-of-profits` can be separated into two
 categories:

@@ -7,7 +7,7 @@ license = "MIT"
 description = "Secure crypto portfolio tracker REPL"
 readme = ".github/README.md"
 repository = "https://github.com/ndavd/bop"
-exclude = [".github/workflows"]
+exclude = [".github/*.gif", ".github/workflows"]
 keywords = ["blockchain", "portfolio", "tracker"]
 categories = ["cryptography::cryptocurrencies", "visualization"]
 
