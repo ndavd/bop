@@ -19,7 +19,10 @@ use crate::{
         Chain, ChainOps,
     },
     dexscreener,
-    utils::{retry::handle_retry_indexed, spinner::Spinner, table::Table, text::StylizedText},
+    utils::{
+        float::ExtendFloat, retry::handle_retry_indexed, spinner::Spinner, table::Table,
+        text::StylizedText,
+    },
 };
 
 static BOOK_OF_PROFITS: &str = "Book of Profits";
@@ -728,7 +731,7 @@ alias, if set.
                             balance.chain.clone(),
                             balance.token.symbol.clone(),
                             balance.token.format(&balance.balance_native).to_string(),
-                            balance.balance_usd.to_string(),
+                            balance.balance_usd.round_to_fixed_string(2),
                         ])
                     })
                     .collect::<Vec<_>>();
@@ -750,7 +753,8 @@ alias, if set.
                     relevant_balances.len(),
                     relevant_balances
                         .iter()
-                        .fold(0.0, |sum, b| sum + b.balance_usd),
+                        .fold(0.0, |sum, b| sum + b.balance_usd)
+                        .round_to_fixed_string(2),
                 );
                 Ok(())
             }
