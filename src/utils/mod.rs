@@ -1,6 +1,6 @@
+pub mod float;
 pub mod retry;
 pub mod spinner;
 pub mod support_option;
 pub mod table;
 pub mod text;
-pub mod float;
