@@ -156,7 +156,7 @@ impl ChainOps for SolChain {
             .iter()
             .map(|token| token.mint.as_str())
             .collect();
-        let pairs = dexscreener::get_pairs(token_addresses)
+        let pairs = dexscreener::pairs::get_pairs(token_addresses)
             .await
             .to_supported()?;
         SupportOption::SupportedSome(

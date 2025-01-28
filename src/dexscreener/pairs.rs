@@ -8,8 +8,6 @@ use serde::Deserialize;
 
 use crate::utils::retry::handle_retry;
 
-pub const DEXSCREENER_API_URL: &str = "https://api.dexscreener.com";
-
 #[derive(Deserialize, Debug, Clone)]
 pub struct Token {
     pub address: String,
@@ -61,9 +59,10 @@ where
     let progress_handler = Arc::new(progress_handler);
     let pairs = stream::iter(tokens.clone())
         .map(async |t| {
-            let url =
-                Url::from_str(format!("{DEXSCREENER_API_URL}/latest/dex/tokens/{}", t).as_str())
-                    .unwrap();
+            let url = Url::from_str(
+                format!("https://api.dexscreener.com/latest/dex/tokens/{}", t).as_str(),
+            )
+            .unwrap();
             let task = async || (get_pairs_request(url.clone()).await, None);
             let result = handle_retry(task).await;
             if let Some(handler) = progress_handler.as_ref() {

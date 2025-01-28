@@ -690,7 +690,7 @@ alias, if set.
                 self.spinner.set_total(tokens_to_fetch_price.len());
                 self.spinner.start(Some("Fetching token prices..."));
 
-                let pairs = match dexscreener::get_pairs_with_progress(
+                let pairs = match dexscreener::pairs::get_pairs_with_progress(
                     tokens_to_fetch_price,
                     Some(|| {
                         self.spinner.inc_progress();
