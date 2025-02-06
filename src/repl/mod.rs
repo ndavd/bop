@@ -838,36 +838,40 @@ alias, if set.
     }
     fn sync_rpcs(&mut self) {
         let default_chains = Self::default().chains;
-        let _ = self.chains.iter_mut().filter_map(|c| {
-            let id = c.properties.get_id();
-            if let Some(rpc) = self.config.rpcs.get(&id) {
-                if c.chain_type == ChainType::Ton {
-                    let mut headers = HeaderMap::new();
-                    headers.insert("Authorization", format!("Bearer {rpc}").parse().unwrap());
-                    c.properties.rpc_headers = headers;
-                } else {
-                    c.properties.rpc_url = Url::from_str(rpc).unwrap();
-                }
-                return Some(c);
-            }
-            let default_properties = &default_chains
-                .iter()
-                .find(|d| d.properties.get_id() == id)
-                .unwrap()
-                .properties;
-            if c.chain_type != ChainType::Ton {
-                if default_properties.rpc_url.to_string() != c.properties.rpc_url.to_string() {
-                    c.properties.rpc_url = default_properties.rpc_url.clone();
+        let _ = self
+            .chains
+            .iter_mut()
+            .filter_map(|c| {
+                let id = c.properties.get_id();
+                if let Some(rpc) = self.config.rpcs.get(&id) {
+                    if c.chain_type == ChainType::Ton {
+                        let mut headers = HeaderMap::new();
+                        headers.insert("Authorization", format!("Bearer {rpc}").parse().unwrap());
+                        c.properties.rpc_headers = headers;
+                    } else {
+                        c.properties.rpc_url = Url::from_str(rpc).unwrap();
+                    }
                     return Some(c);
                 }
-                return None;
-            }
-            if c.properties.rpc_headers.get("Authorization").is_some() {
-                c.properties.rpc_headers = HeaderMap::new();
-                return Some(c);
-            }
-            None
-        }).collect::<Vec<_>>();
+                let default_properties = &default_chains
+                    .iter()
+                    .find(|d| d.properties.get_id() == id)
+                    .unwrap()
+                    .properties;
+                if c.chain_type != ChainType::Ton {
+                    if default_properties.rpc_url.to_string() != c.properties.rpc_url.to_string() {
+                        c.properties.rpc_url = default_properties.rpc_url.clone();
+                        return Some(c);
+                    }
+                    return None;
+                }
+                if c.properties.rpc_headers.get("Authorization").is_some() {
+                    c.properties.rpc_headers = HeaderMap::new();
+                    return Some(c);
+                }
+                None
+            })
+            .collect::<Vec<_>>();
     }
     fn store_config_to_data_file(&mut self) -> Result<(), String> {
         let mut contents = serde_json::to_vec(&self.config).unwrap();
