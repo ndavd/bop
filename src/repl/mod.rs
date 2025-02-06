@@ -838,7 +838,7 @@ alias, if set.
     }
     fn sync_rpcs(&mut self) {
         let default_chains = Self::default().chains;
-        self.chains.iter_mut().find_map(|c| {
+        let _ = self.chains.iter_mut().filter_map(|c| {
             let id = c.properties.get_id();
             if let Some(rpc) = self.config.rpcs.get(&id) {
                 if c.chain_type == ChainType::Ton {
@@ -867,7 +867,7 @@ alias, if set.
                 return Some(c);
             }
             None
-        });
+        }).collect::<Vec<_>>();
     }
     fn store_config_to_data_file(&mut self) -> Result<(), String> {
         let mut contents = serde_json::to_vec(&self.config).unwrap();
