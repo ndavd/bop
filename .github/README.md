@@ -125,7 +125,7 @@ user's config directory:
 - For Linux, that's `$XDG_CONFIG_HOME` or `$HOME/.config`
   - Example `/home/alice/.config/.bop-data`
 - For MacOS, that's `$HOME/Library/Application Support`
-  - Example `/Users/Alice/Library/Application/.bop-data`
+  - Example `/Users/Alice/Library/Application Support/.bop-data`
 - For Windows, that's `{FOLDERID_RoamingAppData}`
   - Example `C:\Users\Alice\AppData\Roaming\.bop-data`
 
