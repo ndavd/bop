@@ -74,6 +74,7 @@ cargo uninstall book-of-profits
 | `✅`                      | Export raw configuration in plaintext                                                |
 | `✅`                      | Display spinner when loading                                                         |
 | `⚠️` Not supported in EVM | Scan for token holdings in account and automatically add them                        |
+| `❌`                      | Fallback RPCs                                                                        |
 | `❌`                      | Show balance by chain                                                                |
 | `❌`                      | Show balance by account                                                              |
 | `❌`                      | Automatically prune low liquidity tokens                                             |
