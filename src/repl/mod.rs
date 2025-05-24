@@ -598,6 +598,8 @@ alias, if set.
                         let task = || chain.get_native_token_balance(address);
                         let result = handle_retry_indexed(i, task).await;
                         self.spinner.inc_progress();
+                        self.spinner
+                            .set_desc(Some(format!("({})", chain.properties.name)));
                         result
                     })
                     .buffer_unordered(20)
@@ -609,6 +611,8 @@ alias, if set.
                         let task = || chain.get_token_balance(token, address);
                         let result = handle_retry_indexed(i, task).await;
                         self.spinner.inc_progress();
+                        self.spinner
+                            .set_desc(Some(format!("({})", chain.properties.name)));
                         result
                     })
                     .buffer_unordered(20)
@@ -629,6 +633,8 @@ alias, if set.
                         };
                         let result = handle_retry_indexed(i, task).await;
                         self.spinner.inc_progress();
+                        self.spinner
+                            .set_desc(Some(format!("({})", chain.properties.name)));
                         result
                     })
                     .buffer_unordered(20)
@@ -798,7 +804,11 @@ alias, if set.
         Ok(())
     }
     fn read_password(&mut self) -> Result<(), String> {
-        let pass = match age::cli_common::read_secret("Enter password", "Password", None) {
+        let pass = match age::cli_common::read_secret(
+            "Enter password",
+            format!("{BOOK_OF_PROFITS} password").as_str(),
+            None,
+        ) {
             Ok(x) => x,
             _ => return Err("Could not read password".to_string()),
         };
