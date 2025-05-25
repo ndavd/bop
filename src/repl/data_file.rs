@@ -17,7 +17,7 @@ pub fn data_file_exists() -> Result<bool, String> {
 pub fn read_data_file() -> Result<Vec<u8>, String> {
     match std::fs::read(get_data_file_path()?) {
         Ok(x) => Ok(x),
-        _ => return Err("Could not read data file".to_string()),
+        _ => Err("Could not read data file".to_string()),
     }
 }
 

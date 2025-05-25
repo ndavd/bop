@@ -15,6 +15,6 @@ async fn main() {
         }
     }
     if let Err(err) = Repl::default().run().await {
-        eprintln!("Error: {}", err);
+        eprintln!("Error: {err}");
     }
 }

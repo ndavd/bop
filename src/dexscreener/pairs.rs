@@ -60,7 +60,7 @@ where
     let pairs = stream::iter(tokens.clone())
         .map(async |t| {
             let url = Url::from_str(
-                format!("https://api.dexscreener.com/latest/dex/tokens/{}", t).as_str(),
+                format!("https://api.dexscreener.com/latest/dex/tokens/{t}").as_str(),
             )
             .unwrap();
             let task = async |_rpc_index| (get_pairs_request(url.clone()).await, None);

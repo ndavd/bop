@@ -123,7 +123,7 @@ impl ChainOps for SolChain {
         let (balances, wait_time) = self
             .rpc_call::<SolGetTokenBalanceResponse>("getTokenAccountsByOwner", params, rpc_index)
             .await;
-        if balances.is_some() && balances.clone().unwrap().token_amounts.len() == 0 {
+        if balances.is_some() && balances.clone().unwrap().token_amounts.is_empty() {
             return (Some(BigUint::ZERO), wait_time);
         }
         (

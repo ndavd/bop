@@ -53,9 +53,7 @@ impl Spinner {
                 let output = format!(
                     "\r{}{}{}{}",
                     FRAMES[i].to_colored(),
-                    extra_msg
-                        .and_then(|s| Some(format!(" {s}")))
-                        .unwrap_or_default(),
+                    extra_msg.map(|s| format!(" {s}")).unwrap_or_default(),
                     if show_progress {
                         format!(
                             " {}/{}",

@@ -126,8 +126,7 @@ impl Repl {
         {
             Some(x) => Ok(x),
             None => Err(format!(
-                "There is no available chain with name {:?}",
-                chain_name
+                "There is no available chain with name {chain_name:?}",
             )),
         }
     }
@@ -138,10 +137,10 @@ impl Repl {
             .iter()
             .find_map(|(chain_type, address, alias)| {
                 (account == address || alias.clone().is_some_and(|alias| alias == account))
-                    .then(|| (chain_type, address))
+                    .then_some((chain_type, address))
             }) {
             Some(x) => Ok(x),
-            _ => Err(format!("Found no account corresponding to {:?}", account)),
+            _ => Err(format!("Found no account corresponding to {account:?}")),
         }
     }
     fn format_address(a: &str) -> String {
@@ -149,7 +148,7 @@ impl Repl {
         let last = &a[a.len() - 5..].to_string();
         format!("{first}..{last}")
     }
-    fn format_account(address: &String, alias: &Option<String>) -> String {
+    fn format_account(address: &str, alias: &Option<String>) -> String {
         if alias.is_some() {
             return alias.clone().unwrap();
         }
@@ -293,7 +292,7 @@ can use the same command to set an authentication token for the API.
                         let chain_name = self.find_chain(arg)?.properties.name.clone();
                         self.config.rpcs.remove_entry(arg);
                         self.store_config_to_data_file()?;
-                        println!("{} chain set back to default state", chain_name);
+                        println!("{chain_name} chain set back to default state");
                         Ok(())
                     }
                     "toggle" => {
@@ -340,7 +339,7 @@ can use the same command to set an authentication token for the API.
                 let arg = command_parts[2];
                 let chain = self.find_chain(chain_id)?;
                 if chain.chain_type != ChainType::Ton && Url::from_str(arg).is_err() {
-                    return Err(format!("{:?} is not a valid url", arg));
+                    return Err(format!("{arg:?} is not a valid url"));
                 }
                 self.config
                     .rpcs
@@ -374,7 +373,7 @@ alias, if set.
                             ])
                         })
                         .collect::<Vec<_>>();
-                    if rows.len() == 0 {
+                    if rows.is_empty() {
                         continue;
                     }
                     rows.insert(
@@ -450,7 +449,7 @@ alias, if set.
                             Vec::from([t.symbol.clone(), t.address.clone(), t.decimals.to_string()])
                         })
                         .collect::<Vec<_>>();
-                    if tokens.len() == 0 {
+                    if tokens.is_empty() {
                         continue;
                     }
                     tokens.insert(
@@ -483,14 +482,13 @@ alias, if set.
                                 ))
                             }
                         };
-                        let token = match Token::new(&token_address, &chain).await {
+                        let token = match Token::new(&token_address, chain).await {
                             Some(x) => x,
                             None => return Err("Could not fetch token info".to_string()),
                         };
                         if self
                             .tokens_of_chain(chain)
-                            .find(|(_, t)| t.address == token.address)
-                            .is_some()
+                            .any(|(_, t)| t.address == token.address)
                         {
                             return Err("Token already added".to_string());
                         }
@@ -516,8 +514,7 @@ alias, if set.
                             Some(x) => self.config.tokens.remove(x),
                             None => {
                                 return Err(format!(
-                                    "Could not find token with address {:?}",
-                                    token_address
+                                    "Could not find token with address {token_address:?}",
                                 ))
                             }
                         };
@@ -542,10 +539,10 @@ alias, if set.
                         let new_tokens = tokens_found
                             .into_iter()
                             .filter_map(|t| {
-                                self.tokens_of_chain(chain)
-                                    .find(|(_, ct)| ct.address == t.address)
-                                    .is_none()
-                                    .then(|| (chain_id.to_string(), t))
+                                (!self
+                                    .tokens_of_chain(chain)
+                                    .any(|(_, ct)| ct.address == t.address))
+                                .then(|| (chain_id.to_string(), t))
                             })
                             .collect::<Vec<_>>();
                         let new_tokens_len = new_tokens.len();
@@ -554,7 +551,7 @@ alias, if set.
                         if new_tokens_len == 0 {
                             println!("Found no new tokens");
                         } else {
-                            println!("{} new tokens added", new_tokens_len);
+                            println!("{new_tokens_len} new tokens added");
                         }
                         Ok(())
                     }
@@ -577,7 +574,7 @@ alias, if set.
                     .accounts
                     .iter()
                     .flat_map(|(chain_type, address, alias)| {
-                        self.enabled_chains_of_type(&chain_type)
+                        self.enabled_chains_of_type(chain_type)
                             .map(move |chain| (chain, address, alias))
                     })
                     .partition(|(chain, _, _)| chain.chain_type == ChainType::Ton);
@@ -585,7 +582,7 @@ alias, if set.
                 let accounts_not_supported = accounts_not_supported
                     .iter()
                     .flat_map(|(chain, address, alias)| {
-                        self.tokens_of_chain(&chain)
+                        self.tokens_of_chain(chain)
                             .map(move |(_, token)| (chain, token.clone(), address, alias))
                     })
                     .collect::<Vec<_>>();
@@ -688,11 +685,8 @@ alias, if set.
                     account_holdings
                         .iter()
                         .filter_map(move |(token_address, balance)| {
-                            let Some((_, token)) =
-                                tokens_of_chain.find(|(_, t)| t.address == *token_address)
-                            else {
-                                return None;
-                            };
+                            let (_, token) =
+                                tokens_of_chain.find(|(_, t)| t.address == *token_address)?;
                             (*balance != BigUint::ZERO).then(|| ReplBalanceEntry {
                                 account: account_label.clone(),
                                 chain: chain.properties.name.clone(),
@@ -721,7 +715,7 @@ alias, if set.
                 .await
                 {
                     Some(x) => x,
-                    None => return Err(format!("Could not fetch tokens price")),
+                    None => return Err("Could not fetch tokens price".to_string()),
                 }
                 .iter()
                 .filter_map(|p| {
@@ -732,8 +726,7 @@ alias, if set.
 
                 self.spinner.stop();
 
-                for i in 0..balances.len() {
-                    let balance = &mut balances[i];
+                for balance in &mut balances {
                     if let Some((_, price)) =
                         pairs.iter().find(|pair| pair.0 == balance.token.address)
                     {
@@ -795,7 +788,10 @@ alias, if set.
             "chain" => self.handle_chain(command_parts),
             "account" => self.handle_account(command_parts),
             "config" => self.handle_config(command_parts),
-            "help" | "?" => Ok(Self::display_help()),
+            "help" | "?" => {
+                Self::display_help();
+                Ok(())
+            }
             "exit" | "quit" => std::process::exit(0),
             x => Err(format!("Unknown command: {x:?}")),
         } {

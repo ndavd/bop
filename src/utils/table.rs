@@ -32,7 +32,7 @@ impl Default for Table {
 
 impl Display for Table {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.rows.len() == 0 {
+        if self.rows.is_empty() {
             return write!(f, "");
         }
         if self.title != String::default() {
@@ -43,8 +43,8 @@ impl Display for Table {
         let col_count = self.rows[0].len();
         let mut col_widths: Vec<usize> = vec![0; col_count];
         for i in 0..row_count {
-            for j in 0..col_count {
-                col_widths[j] = (self.rows[i][j].len() + self.spacing).max(col_widths[j]);
+            for (j, col_width) in col_widths.iter_mut().enumerate().take(col_count) {
+                *col_width = (self.rows[i][j].len() + self.spacing).max(*col_width);
             }
         }
         for i in 0..row_count {
