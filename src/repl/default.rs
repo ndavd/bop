@@ -9,7 +9,7 @@ impl Default for Repl {
     fn default() -> Self {
         let sol = Vec::from([Chain::new(
             ChainType::Solana,
-            "https://api.mainnet-beta.solana.com",
+            Vec::from(["https://api.mainnet-beta.solana.com"]),
             "Solana",
             "SOL",
             "So11111111111111111111111111111111111111112",
@@ -17,7 +17,7 @@ impl Default for Repl {
         )]);
         let ton = Vec::from([Chain::new(
             ChainType::Ton,
-            "https://tonapi.io/v2",
+            Vec::from(["https://tonapi.io/v2"]),
             "Ton",
             "TON",
             "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
@@ -26,7 +26,12 @@ impl Default for Repl {
         let evm = Vec::from([
             Chain::new(
                 ChainType::Evm,
-                "https://eth.llamarpc.com",
+                Vec::from([
+                    "https://eth.llamarpc.com",
+                    "https://eth.drpc.org",
+                    "https://ethereum-rpc.publicnode.com",
+                    "https://mainnet.gateway.tenderly.co",
+                ]),
                 "Ethereum",
                 "ETH",
                 "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
@@ -34,7 +39,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://base.llamarpc.com",
+                Vec::from([
+                    "https://base.llamarpc.com",
+                    "https://base-rpc.publicnode.com",
+                    "https://base.drpc.org",
+                    "https://base.gateway.tenderly.co",
+                ]),
                 "Base",
                 "ETH",
                 "0x4200000000000000000000000000000000000006",
@@ -42,7 +52,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://binance.llamarpc.com",
+                Vec::from([
+                    "https://binance.llamarpc.com",
+                    "https://bsc.drpc.org",
+                    "https://bsc.meowrpc.com",
+                    "https://bsc.blockrazor.xyz",
+                ]),
                 "BSC",
                 "BNB",
                 "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
@@ -50,7 +65,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://arbitrum.llamarpc.com",
+                Vec::from([
+                    "https://arbitrum.llamarpc.com",
+                    "https://arbitrum.drpc.org",
+                    "https://arbitrum.meowrpc.com",
+                    "https://rpc.therpc.io/arbitrum",
+                ]),
                 "Arbitrum",
                 "ETH",
                 "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
@@ -58,7 +78,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://avalanche.drpc.org",
+                Vec::from([
+                    "https://avalanche.drpc.org",
+                    "https://avalanche.drpc.org",
+                    "https://avax.meowrpc.com",
+                    "https://avalanche-c-chain-rpc.publicnode.com",
+                ]),
                 "Avalanche",
                 "AVAX",
                 "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
@@ -66,7 +91,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://polygon.llamarpc.com",
+                Vec::from([
+                    "https://polygon.llamarpc.com",
+                    "https://polygon.meowrpc.com",
+                    "https://polygon.drpc.org",
+                    "https://polygon-rpc.com",
+                ]),
                 "Polygon",
                 "POL",
                 "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
@@ -74,7 +104,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://mainnet.era.zksync.io",
+                Vec::from([
+                    "https://mainnet.era.zksync.io",
+                    "https://1rpc.io/zksync2-era",
+                    "https://zksync.drpc.org",
+                    "https://zksync.meowrpc.com",
+                ]),
                 "zkSync",
                 "ETH",
                 "0x5AEa5775959fBC2557Cc8789bC1bf90A239D9a91",
@@ -82,7 +117,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://cronos-evm-rpc.publicnode.com",
+                Vec::from([
+                    "https://cronos-evm-rpc.publicnode.com",
+                    "https://cronos.drpc.org",
+                    "https://1rpc.io/cro",
+                    "https://evm.cronos.org",
+                ]),
                 "Cronos",
                 "CRO",
                 "0x5C7F8A570d578ED84E63fdFA7b1eE72dEae1AE23",
@@ -90,7 +130,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://fantom.drpc.org",
+                Vec::from([
+                    "https://fantom.drpc.org",
+                    "https://1rpc.io/ftm",
+                    "https://rpc.fantom.network",
+                    "https://fantom-rpc.publicnode.com",
+                ]),
                 "Fantom",
                 "FTM",
                 "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83",
@@ -98,7 +143,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://mainnet.optimism.io",
+                Vec::from([
+                    "https://mainnet.optimism.io",
+                    "https://1rpc.io/op",
+                    "https://optimism.drpc.org",
+                    "https://optimism.rpc.subquery.network/public",
+                ]),
                 "Optimism",
                 "ETH",
                 "0x4200000000000000000000000000000000000006",
@@ -106,7 +156,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://linea.drpc.org",
+                Vec::from([
+                    "https://linea.drpc.org",
+                    "https://rpc.linea.build",
+                    "https://linea-rpc.publicnode.com",
+                    "https://1rpc.io/linea",
+                ]),
                 "Linea",
                 "ETH",
                 "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f",
@@ -114,7 +169,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://rpc.mantle.xyz",
+                Vec::from([
+                    "https://rpc.mantle.xyz",
+                    "https://1rpc.io/mantle",
+                    "https://mantle-rpc.publicnode.com",
+                    "https://mantle-mainnet.public.blastapi.io",
+                ]),
                 "Mantle",
                 "MNT",
                 "0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE",
@@ -122,7 +182,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://metis.drpc.org",
+                Vec::from([
+                    "https://metis.drpc.org",
+                    "https://metis-andromeda.rpc.thirdweb.com",
+                    "https://metis-pokt.nodies.app",
+                    "https://metis-andromeda.gateway.tenderly.co",
+                ]),
                 "Metis",
                 "METIS",
                 "0x75cb093E4D61d2A2e65D8e0BBb01DE8d89b53481",
@@ -130,7 +195,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://core.drpc.org",
+                Vec::from([
+                    "https://core.drpc.org",
+                    "https://1rpc.io/core",
+                    "https://rpc.coredao.org",
+                    "https://rpc.ankr.com/core",
+                ]),
                 "Core",
                 "CORE",
                 "0x40375C92d9FAf44d2f9db9Bd9ba41a3317a2404f",
@@ -138,7 +208,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://rpc.scroll.io",
+                Vec::from([
+                    "https://rpc.scroll.io",
+                    "https://rpc.ankr.com/scroll",
+                    "https://scroll-rpc.publicnode.com",
+                    "https://1rpc.io/scroll",
+                ]),
                 "Scroll",
                 "ETH",
                 "0x5300000000000000000000000000000000000004",
@@ -146,7 +221,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://rpc.ankr.com/iotex",
+                Vec::from([
+                    "https://rpc.ankr.com/iotex",
+                    "https://iotex-network.rpc.thirdweb.com",
+                    "https://iotex.api.onfinality.io/public",
+                    "https://babel-api.mainnet.iotex.io",
+                ]),
                 "IoTeX",
                 "IOTX",
                 "0xA00744882684C3e4747faEFD68D283eA44099D03",
@@ -154,7 +234,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://forno.celo.org",
+                Vec::from([
+                    "https://forno.celo.org",
+                    "https://rpc.ankr.com/celo",
+                    "https://celo.drpc.org",
+                    "https://celo-json-rpc.stakely.io",
+                ]),
                 "Celo",
                 "CELO",
                 "0x471EcE3750Da237f93B8E339c536989b8978a438",
@@ -162,7 +247,11 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://rpc.pulsechain.com",
+                Vec::from([
+                    "https://rpc.pulsechain.com",
+                    "https://pulsechain-rpc.publicnode.com",
+                    "https://rpc-pulsechain.g4mm4.io",
+                ]),
                 "PulseChain",
                 "PLS",
                 "0xA1077a294dDE1B09bB078844df40758a5D0f9a27",
@@ -170,7 +259,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://polygon-zkevm.drpc.org",
+                Vec::from([
+                    "https://polygon-zkevm.drpc.org",
+                    "https://zkevm-rpc.com",
+                    "https://1rpc.io/polygon/zkevm",
+                    "https://polygon-zkevm-mainnet.public.blastapi.io",
+                ]),
                 "Polygon zkEVM",
                 "ETH",
                 "0x4F9A0e7FD2Bf6067db6994CF12E4495Df938E6e9",
@@ -178,7 +272,12 @@ impl Default for Repl {
             ),
             Chain::new(
                 ChainType::Evm,
-                "https://rpc.telos.net",
+                Vec::from([
+                    "https://rpc.telos.net",
+                    "https://telos.drpc.org",
+                    "https://1rpc.io/telos/evm",
+                    "https://rpc.ankr.com/telos",
+                ]),
                 "Telos",
                 "TLOS",
                 "0xB4B01216a5Bc8F1C8A33CD990A1239030E60C905",

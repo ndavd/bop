@@ -75,7 +75,7 @@ impl TonChain {
     ) -> (Option<T>, Option<f32>) {
         let mut url = Url::parse(&format!(
             "{}/{}",
-            self.properties.rpc_url.to_string(),
+            self.properties.rpc_urls[0].to_string(),
             route
         ))
         .unwrap();
@@ -97,7 +97,11 @@ impl TonChain {
 }
 
 impl ChainOps for TonChain {
-    async fn get_native_token_balance(&self, address: &str) -> (Option<BigUint>, Option<f32>) {
+    async fn get_native_token_balance(
+        &self,
+        address: &str,
+        _rpc_index: usize,
+    ) -> (Option<BigUint>, Option<f32>) {
         let (balance, wait_time) = self
             .api_call::<TonGetAccountResponse>(format!("accounts/{address}"), vec![])
             .await;
@@ -110,6 +114,7 @@ impl ChainOps for TonChain {
         &self,
         token: &Token,
         address: &str,
+        _rpc_index: usize,
     ) -> (Option<BigUint>, Option<f32>) {
         let (balance, wait_time) = self
             .api_call::<TonGetAccountJettonBalanceResponse>(
@@ -122,7 +127,11 @@ impl ChainOps for TonChain {
             wait_time,
         )
     }
-    async fn get_holdings_balance(&self, address: &str) -> SupportOption<Vec<(String, BigUint)>> {
+    async fn get_holdings_balance(
+        &self,
+        address: &str,
+        _rpc_index: usize,
+    ) -> SupportOption<Vec<(String, BigUint)>> {
         let address = self.parse_wallet_address(&address).to_supported()?;
         self.api_call::<TonGetAccountJettonsBalancesResponse>(
             format!("accounts/{}/jettons", address),
@@ -142,7 +151,7 @@ impl ChainOps for TonChain {
         .collect::<Option<_>>()
         .into()
     }
-    async fn get_token_decimals(&self, token_address: &str) -> Option<usize> {
+    async fn get_token_decimals(&self, token_address: &str, _rpc_index: usize) -> Option<usize> {
         usize::from_str(
             &self
                 .api_call::<TonGetJettonInfo>(format!("jettons/{token_address}"), vec![])
@@ -154,7 +163,7 @@ impl ChainOps for TonChain {
         .ok()
         .into()
     }
-    async fn scan_for_tokens(&self, address: &str) -> SupportOption<Vec<Token>> {
+    async fn scan_for_tokens(&self, address: &str, _rpc_index: usize) -> SupportOption<Vec<Token>> {
         let address = self.parse_wallet_address(&address).to_supported()?;
         self.api_call::<TonGetAccountJettonsBalancesResponse>(
             format!("accounts/{}/jettons", address),

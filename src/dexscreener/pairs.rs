@@ -63,7 +63,7 @@ where
                 format!("https://api.dexscreener.com/latest/dex/tokens/{}", t).as_str(),
             )
             .unwrap();
-            let task = async || (get_pairs_request(url.clone()).await, None);
+            let task = async |_rpc_index| (get_pairs_request(url.clone()).await, None);
             let result = handle_retry(task).await;
             if let Some(handler) = progress_handler.as_ref() {
                 handler();
