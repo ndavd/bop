@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -22,14 +22,17 @@ impl ChainType {
     }
 }
 
-impl ToString for ChainType {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Evm => "evm",
-            Self::Solana => "sol",
-            Self::Ton => "ton",
-        }
-        .to_string()
+impl Display for ChainType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Evm => "evm",
+                Self::Solana => "sol",
+                Self::Ton => "ton",
+            }
+        )
     }
 }
 

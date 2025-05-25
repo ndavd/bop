@@ -23,7 +23,7 @@ impl Token {
         let symbol = chain.get_token_symbol(address, 0).await?;
         Some(Self {
             symbol,
-            address: chain.parse_token_address(&address)?,
+            address: chain.parse_token_address(address)?,
             decimals,
         })
     }
@@ -33,7 +33,7 @@ impl Token {
         if mag > 0 {
             value.insert(mag as usize, '.');
         } else {
-            value = format!("0.{}{value}", "0".repeat(mag.abs() as usize));
+            value = format!("0.{}{value}", "0".repeat(mag.unsigned_abs()));
         }
         value.parse().unwrap()
     }

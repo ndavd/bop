@@ -56,7 +56,7 @@ impl EvmChain {
                 .json::<EthCallResponse>()
                 .await
                 .ok()
-                .and_then(|x| Some(x.result)),
+                .map(|x| x.result),
             seconds,
         )
     }
@@ -111,9 +111,7 @@ impl ChainOps for EvmChain {
             "latest"
         ]);
         let decimals_hex = self.rpc_call("eth_call", params, rpc_index).await.0?;
-        BigUint::parse_bytes(&decimals_hex.as_bytes()[2..], 16)?
-            .to_usize()
-            .into()
+        BigUint::parse_bytes(&decimals_hex.as_bytes()[2..], 16)?.to_usize()
     }
     async fn scan_for_tokens(
         &self,
@@ -130,7 +128,7 @@ impl ChainOps for EvmChain {
         if address.len() != 40 {
             return None;
         }
-        if !address.chars().all(|c| c.is_digit(16)) {
+        if !address.chars().all(|c| c.is_ascii_hexdigit()) {
             return None;
         }
         let mut hasher = Keccak256::new();

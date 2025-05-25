@@ -73,12 +73,7 @@ impl TonChain {
         route: String,
         query_pairs: Vec<(&str, &str)>,
     ) -> (Option<T>, Option<f32>) {
-        let mut url = Url::parse(&format!(
-            "{}/{}",
-            self.properties.rpc_urls[0].to_string(),
-            route
-        ))
-        .unwrap();
+        let mut url = Url::parse(&format!("{}/{}", self.properties.rpc_urls[0], route)).unwrap();
         url.query_pairs_mut().extend_pairs(query_pairs);
         let response = match self
             .http_client
@@ -105,10 +100,7 @@ impl ChainOps for TonChain {
         let (balance, wait_time) = self
             .api_call::<TonGetAccountResponse>(format!("accounts/{address}"), vec![])
             .await;
-        (
-            balance.and_then(|b| Some(BigUint::from(b.balance))),
-            wait_time,
-        )
+        (balance.map(|b| BigUint::from(b.balance)), wait_time)
     }
     async fn get_token_balance(
         &self,
@@ -132,9 +124,9 @@ impl ChainOps for TonChain {
         address: &str,
         _rpc_index: usize,
     ) -> SupportOption<Vec<(String, BigUint)>> {
-        let address = self.parse_wallet_address(&address).to_supported()?;
+        let address = self.parse_wallet_address(address).to_supported()?;
         self.api_call::<TonGetAccountJettonsBalancesResponse>(
-            format!("accounts/{}/jettons", address),
+            format!("accounts/{address}/jettons"),
             vec![],
         )
         .await
@@ -161,12 +153,11 @@ impl ChainOps for TonChain {
                 .decimals,
         )
         .ok()
-        .into()
     }
     async fn scan_for_tokens(&self, address: &str, _rpc_index: usize) -> SupportOption<Vec<Token>> {
-        let address = self.parse_wallet_address(&address).to_supported()?;
+        let address = self.parse_wallet_address(address).to_supported()?;
         self.api_call::<TonGetAccountJettonsBalancesResponse>(
-            format!("accounts/{}/jettons", address),
+            format!("accounts/{address}/jettons"),
             vec![],
         )
         .await
