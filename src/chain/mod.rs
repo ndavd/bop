@@ -28,14 +28,14 @@ pub struct Chain {
 impl Chain {
     pub fn new(
         chain_type: ChainType,
-        rpc_url: &str,
+        rpc_urls: Vec<&str>,
         name: &str,
         native_token_symbol: &str,
         native_token_address: &str,
         native_token_decimals: usize,
     ) -> Self {
         let properties = ChainProperties {
-            rpc_url: Url::from_str(rpc_url).unwrap(),
+            rpc_urls: rpc_urls.iter().map(|u| Url::from_str(u).unwrap()).collect(),
             rpc_headers: HeaderMap::new(),
             name: name.to_string(),
             native_token: Token::hardcode(
@@ -53,19 +53,28 @@ impl Chain {
 }
 
 pub trait ChainOps {
-    async fn get_native_token_balance(&self, address: &str) -> (Option<BigUint>, Option<f32>);
+    async fn get_native_token_balance(
+        &self,
+        address: &str,
+        rpc_index: usize,
+    ) -> (Option<BigUint>, Option<f32>);
     async fn get_token_balance(
         &self,
         token: &Token,
         address: &str,
+        rpc_index: usize,
     ) -> (Option<BigUint>, Option<f32>);
-    async fn get_token_decimals(&self, token_address: &str) -> Option<usize>;
-    async fn get_token_symbol(&self, token_address: &str) -> Option<String> {
+    async fn get_token_decimals(&self, token_address: &str, rpc_index: usize) -> Option<usize>;
+    async fn get_token_symbol(&self, token_address: &str, _rpc_index: usize) -> Option<String> {
         let pairs = dexscreener::pairs::get_pairs(vec![token_address]).await?;
         (pairs.len() != 0).then(|| pairs[0].base_token.symbol.clone())
     }
-    async fn get_holdings_balance(&self, address: &str) -> SupportOption<Vec<(String, BigUint)>>;
-    async fn scan_for_tokens(&self, address: &str) -> SupportOption<Vec<Token>>;
+    async fn get_holdings_balance(
+        &self,
+        address: &str,
+        rpc_index: usize,
+    ) -> SupportOption<Vec<(String, BigUint)>>;
+    async fn scan_for_tokens(&self, address: &str, rpc_index: usize) -> SupportOption<Vec<Token>>;
     fn parse_wallet_address(&self, address: &str) -> Option<String>;
     fn parse_token_address(&self, address: &str) -> Option<String> {
         self.parse_wallet_address(address)
@@ -90,27 +99,36 @@ macro_rules! chain_ops_method {
 }
 
 impl ChainOps for Chain {
-    async fn get_native_token_balance(&self, address: &str) -> (Option<BigUint>, Option<f32>) {
-        chain_ops_method!(self, get_native_token_balance, address; await)
+    async fn get_native_token_balance(
+        &self,
+        address: &str,
+        rpc_index: usize,
+    ) -> (Option<BigUint>, Option<f32>) {
+        chain_ops_method!(self, get_native_token_balance, address, rpc_index; await)
     }
     async fn get_token_balance(
         &self,
         token: &Token,
         address: &str,
+        rpc_index: usize,
     ) -> (Option<BigUint>, Option<f32>) {
-        chain_ops_method!(self, get_token_balance, token, address; await)
+        chain_ops_method!(self, get_token_balance, token, address, rpc_index; await)
     }
-    async fn get_holdings_balance(&self, address: &str) -> SupportOption<Vec<(String, BigUint)>> {
-        chain_ops_method!(self, get_holdings_balance, address; await)
+    async fn get_holdings_balance(
+        &self,
+        address: &str,
+        rpc_index: usize,
+    ) -> SupportOption<Vec<(String, BigUint)>> {
+        chain_ops_method!(self, get_holdings_balance, address, rpc_index; await)
     }
-    async fn get_token_decimals(&self, token_address: &str) -> Option<usize> {
-        chain_ops_method!(self, get_token_decimals, token_address; await)
+    async fn get_token_decimals(&self, token_address: &str, rpc_index: usize) -> Option<usize> {
+        chain_ops_method!(self, get_token_decimals, token_address, rpc_index; await)
     }
-    async fn get_token_symbol(&self, token_address: &str) -> Option<String> {
-        chain_ops_method!(self, get_token_symbol, token_address; await)
+    async fn get_token_symbol(&self, token_address: &str, rpc_index: usize) -> Option<String> {
+        chain_ops_method!(self, get_token_symbol, token_address, rpc_index; await)
     }
-    async fn scan_for_tokens(&self, address: &str) -> SupportOption<Vec<Token>> {
-        chain_ops_method!(self, scan_for_tokens, address; await)
+    async fn scan_for_tokens(&self, address: &str, rpc_index: usize) -> SupportOption<Vec<Token>> {
+        chain_ops_method!(self, scan_for_tokens, address, rpc_index; await)
     }
     fn parse_wallet_address(&self, address: &str) -> Option<String> {
         chain_ops_method!(self, parse_wallet_address, address)

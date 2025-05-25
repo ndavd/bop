@@ -15,12 +15,14 @@ pub fn get_retry_time(response: &Response) -> Option<f32> {
 
 pub async fn handle_retry<F, Fut, T>(mut task: F) -> T
 where
-    F: FnMut() -> Fut,
+    F: FnMut(usize) -> Fut,
     Fut: Future<Output = (Option<T>, Option<f32>)>,
 {
     let mut retries = 0;
+    // NOTE: Index that is used to change RPC
+    let mut index = 0;
     loop {
-        let (result, retry_time) = task().await;
+        let (result, retry_time) = task(index).await;
         match result {
             Some(x) => return x,
             None => {
@@ -28,6 +30,7 @@ where
                     sleep(Duration::from_secs_f32(retry_time.unwrap_or(2.0))).await;
                 }
                 retries += 1;
+                index += 1;
             }
         };
     }
@@ -35,7 +38,7 @@ where
 
 pub async fn handle_retry_indexed<F, Fut, T>(index: usize, task: F) -> (usize, T)
 where
-    F: FnMut() -> Fut,
+    F: FnMut(usize) -> Fut,
     Fut: Future<Output = (Option<T>, Option<f32>)>,
 {
     (index, handle_retry(task).await)

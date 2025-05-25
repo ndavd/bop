@@ -35,6 +35,7 @@ impl SolChain {
         &self,
         method: &str,
         params: Value,
+        rpc_index: usize,
     ) -> (Option<T>, Option<f32>) {
         let payload = json!({
             "jsonrpc": "2.0",
@@ -44,7 +45,7 @@ impl SolChain {
         });
         let response = match self
             .http_client
-            .post(self.properties.rpc_url.clone())
+            .post(self.properties.rpc_urls[rpc_index % self.properties.rpc_urls.len()].clone())
             .json(&payload)
             .send()
             .await
@@ -98,9 +99,13 @@ struct SolGetTokenAccountsResponse {
 }
 
 impl ChainOps for SolChain {
-    async fn get_native_token_balance(&self, address: &str) -> (Option<BigUint>, Option<f32>) {
+    async fn get_native_token_balance(
+        &self,
+        address: &str,
+        rpc_index: usize,
+    ) -> (Option<BigUint>, Option<f32>) {
         let (balance, wait_time) = self
-            .rpc_call::<SolGetBalanceResponse>("getBalance", json!([address]))
+            .rpc_call::<SolGetBalanceResponse>("getBalance", json!([address]), rpc_index)
             .await;
         (balance.and_then(|b| BigUint::from_u64(b.value)), wait_time)
     }
@@ -108,6 +113,7 @@ impl ChainOps for SolChain {
         &self,
         token: &Token,
         address: &str,
+        rpc_index: usize,
     ) -> (Option<BigUint>, Option<f32>) {
         let params = json!([
             address,
@@ -115,7 +121,7 @@ impl ChainOps for SolChain {
             { "encoding": "jsonParsed" },
         ]);
         let (balances, wait_time) = self
-            .rpc_call::<SolGetTokenBalanceResponse>("getTokenAccountsByOwner", params)
+            .rpc_call::<SolGetTokenBalanceResponse>("getTokenAccountsByOwner", params, rpc_index)
             .await;
         if balances.is_some() && balances.clone().unwrap().token_amounts.len() == 0 {
             return (Some(BigUint::ZERO), wait_time);
@@ -125,29 +131,33 @@ impl ChainOps for SolChain {
             wait_time,
         )
     }
-    async fn get_holdings_balance(&self, _address: &str) -> SupportOption<Vec<(String, BigUint)>> {
+    async fn get_holdings_balance(
+        &self,
+        _address: &str,
+        _rpc_index: usize,
+    ) -> SupportOption<Vec<(String, BigUint)>> {
         SupportOption::Unsupported
     }
-    async fn get_token_decimals(&self, token_address: &str) -> Option<usize> {
+    async fn get_token_decimals(&self, token_address: &str, rpc_index: usize) -> Option<usize> {
         let params = json!([
             token_address,
             { "encoding": "jsonParsed" },
         ]);
         Some(
-            self.rpc_call::<SolGetTokenDecimalsResponse>("getAccountInfo", params)
+            self.rpc_call::<SolGetTokenDecimalsResponse>("getAccountInfo", params, rpc_index)
                 .await
                 .0?
                 .decimals,
         )
     }
-    async fn scan_for_tokens(&self, address: &str) -> SupportOption<Vec<Token>> {
+    async fn scan_for_tokens(&self, address: &str, rpc_index: usize) -> SupportOption<Vec<Token>> {
         let params = json!([
             address,
             { "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
             { "encoding": "jsonParsed" },
         ]);
         let tokens_data = self
-            .rpc_call::<SolGetTokenAccountsResponse>("getTokenAccountsByOwner", params)
+            .rpc_call::<SolGetTokenAccountsResponse>("getTokenAccountsByOwner", params, rpc_index)
             .await
             .0
             .to_supported()?

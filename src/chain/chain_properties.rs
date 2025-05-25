@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub struct ChainProperties {
-    pub rpc_url: Url,
+    pub rpc_urls: Vec<Url>,
     pub rpc_headers: HeaderMap,
     pub name: String,
     pub native_token: Token,

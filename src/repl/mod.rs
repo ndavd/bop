@@ -271,7 +271,18 @@ can use the same command to set an authentication token for the API.
                         "DISABLED".to_string()
                     }
                 );
-                println!("{}", chain.properties.rpc_url);
+                println!("Main RPC: {}", chain.properties.rpc_urls[0]);
+                println!(
+                    "Fallback RPCs: [{}]",
+                    chain
+                        .properties
+                        .rpc_urls
+                        .iter()
+                        .skip(1)
+                        .map(|u| u.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
                 Ok(())
             }
             2 => {
@@ -520,11 +531,14 @@ alias, if set.
                                 chain.chain_type.label(),
                             ));
                         }
-                        let tokens_found =
-                            match chain.scan_for_tokens(account_address).await.to_result()? {
-                                Some(x) => x,
-                                None => return Err("Could not fetch account holdings".to_string()),
-                            };
+                        let tokens_found = match chain
+                            .scan_for_tokens(account_address, 0)
+                            .await
+                            .to_result()?
+                        {
+                            Some(x) => x,
+                            None => return Err("Could not fetch account holdings".to_string()),
+                        };
                         let new_tokens = tokens_found
                             .into_iter()
                             .filter_map(|t| {
@@ -595,7 +609,7 @@ alias, if set.
 
                 let results_natives = stream::iter(accounts_natives.iter().enumerate())
                     .map(async |(i, (chain, address, _))| {
-                        let task = || chain.get_native_token_balance(address);
+                        let task = |rpc_index| chain.get_native_token_balance(address, rpc_index);
                         let result = handle_retry_indexed(i, task).await;
                         self.spinner.inc_progress();
                         self.spinner
@@ -608,7 +622,7 @@ alias, if set.
 
                 let results_not_supported = stream::iter(accounts_not_supported.iter().enumerate())
                     .map(async |(i, (chain, token, address, _))| {
-                        let task = || chain.get_token_balance(token, address);
+                        let task = |rpc_index| chain.get_token_balance(token, address, rpc_index);
                         let result = handle_retry_indexed(i, task).await;
                         self.spinner.inc_progress();
                         self.spinner
@@ -621,10 +635,10 @@ alias, if set.
 
                 let results_supported = stream::iter(accounts_supported.iter().enumerate())
                     .map(async |(i, (chain, address, _))| {
-                        let task = async || {
+                        let task = async |rpc_index| {
                             (
                                 chain
-                                    .get_holdings_balance(address)
+                                    .get_holdings_balance(address, rpc_index)
                                     .await
                                     .to_result()
                                     .unwrap(),
@@ -861,7 +875,7 @@ alias, if set.
                         headers.insert("Authorization", format!("Bearer {rpc}").parse().unwrap());
                         c.properties.rpc_headers = headers;
                     } else {
-                        c.properties.rpc_url = Url::from_str(rpc).unwrap();
+                        c.properties.rpc_urls.insert(0, Url::from_str(rpc).unwrap());
                     }
                     return Some(c);
                 }
@@ -871,8 +885,12 @@ alias, if set.
                     .unwrap()
                     .properties;
                 if c.chain_type != ChainType::Ton {
-                    if default_properties.rpc_url.to_string() != c.properties.rpc_url.to_string() {
-                        c.properties.rpc_url = default_properties.rpc_url.clone();
+                    if default_properties.rpc_urls[0].to_string()
+                        != c.properties.rpc_urls[0].to_string()
+                    {
+                        c.properties
+                            .rpc_urls
+                            .insert(0, default_properties.rpc_urls[0].clone());
                         return Some(c);
                     }
                     return None;
