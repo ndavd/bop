@@ -82,6 +82,8 @@ cargo uninstall book-of-profits
 | `❌`                      | Show total balance of a single token                                                 |
 | `❌`                      | Web client                                                                           |
 | `❌`                      | Centralized exchanges support                                                        |
+| `❌`                      | Cosmos                                                                               |
+| `❌`                      | Use Coingecko for prices and use Dexscreener as a fallback                           |
 
 ## Supported Blockchains
 
