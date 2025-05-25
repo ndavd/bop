@@ -19,18 +19,25 @@ where
     Fut: Future<Output = (Option<T>, Option<f32>)>,
 {
     let mut retries = 0;
-    // NOTE: Index that is used to change RPC
-    let mut index = 0;
+    let mut rpc_index = 0;
+    let maximum_retry_time_secs = 1.0;
     loop {
-        let (result, retry_time) = task(index).await;
+        let (result, retry_time) = task(rpc_index).await;
         match result {
-            Some(x) => return x,
+            Some(x) => {
+                return x;
+            }
             None => {
-                if retries >= 3 {
-                    sleep(Duration::from_secs_f32(retry_time.unwrap_or(2.0))).await;
+                if retries >= 2 {
+                    if let Some(retry_time) = retry_time {
+                        sleep(Duration::from_secs_f32(
+                            retry_time.min(maximum_retry_time_secs),
+                        ))
+                        .await;
+                    }
+                    rpc_index += 1;
                 }
                 retries += 1;
-                index += 1;
             }
         };
     }
