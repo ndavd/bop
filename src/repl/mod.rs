@@ -670,13 +670,15 @@ alias, if set.
                 balances.extend(results_supported.iter().flat_map(|(i, account_holdings)| {
                     let (chain, address, alias) = &accounts_supported[*i];
                     let account_label = Repl::format_account(address, alias);
-                    let mut tokens_of_chain = self.tokens_of_chain(chain);
+                    let tokens_of_chain = self.tokens_of_chain(chain);
                     account_holdings
                         .iter()
                         .filter_map(move |(token_address, balance)| {
-                            let (_, token) = tokens_of_chain
-                                .find(|(_, t)| t.address == *token_address)
-                                .unwrap();
+                            let Some((_, token)) =
+                                tokens_of_chain.find(|(_, t)| t.address == *token_address)
+                            else {
+                                return None;
+                            };
                             (*balance != BigUint::ZERO).then(|| ReplBalanceEntry {
                                 account: account_label.clone(),
                                 chain: chain.properties.name.clone(),
