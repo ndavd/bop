@@ -9,7 +9,12 @@ impl Default for Repl {
     fn default() -> Self {
         let sol = Vec::from([Chain::new(
             ChainType::Solana,
-            Vec::from(["https://api.mainnet-beta.solana.com"]),
+            Vec::from([
+                "https://api.mainnet-beta.solana.com",
+                "https://solana-rpc.publicnode.com",
+                "https://solana.drpc.org",
+                "https://solana.api.onfinality.io/public",
+            ]),
             "Solana",
             "SOL",
             "So11111111111111111111111111111111111111112",
