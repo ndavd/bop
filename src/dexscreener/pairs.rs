@@ -33,7 +33,7 @@ pub struct Pair {
     pub quote_token: Token,
     pub price_native: String,
     pub price_usd: Option<String>,
-    pub market_cap: Option<u64>,
+    pub market_cap: Option<f64>,
     pub liquidity: Option<PairLiquidity>,
 }
 
