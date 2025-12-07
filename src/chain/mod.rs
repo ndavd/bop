@@ -68,7 +68,7 @@ pub trait ChainOps {
     ) -> (Option<BigUint>, Option<f32>);
     async fn get_token_decimals(&self, token_address: &str, rpc_index: usize) -> Option<usize>;
     async fn get_token_symbol(&self, token_address: &str, _rpc_index: usize) -> Option<String> {
-        let pairs = dexscreener::pairs::get_pairs(vec![token_address]).await?;
+        let pairs = dexscreener::pairs::get_pairs(vec![token_address], vec![]).await?;
         (!pairs.is_empty()).then(|| pairs[0].base_token.symbol.clone())
     }
     async fn get_holdings_balance(

@@ -706,8 +706,16 @@ alias, if set.
                 self.spinner.set_total(tokens_to_fetch_price.len());
                 self.spinner.start(Some("Fetching token prices..."));
 
+                let stables = self
+                    .chains
+                    .iter()
+                    .flat_map(|c| &c.properties.stables)
+                    .map(|stable| stable.address.as_str())
+                    .collect::<Vec<_>>();
+
                 let pairs = match dexscreener::pairs::get_pairs_with_progress(
                     tokens_to_fetch_price,
+                    stables,
                     Some(|| {
                         self.spinner.inc_progress();
                     }),
