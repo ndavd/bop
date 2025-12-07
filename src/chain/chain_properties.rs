@@ -8,6 +8,7 @@ pub struct ChainProperties {
     pub rpc_headers: HeaderMap,
     pub name: String,
     pub native_token: Token,
+    pub stables: Vec<Token>,
 }
 
 impl Display for ChainProperties {

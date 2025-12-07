@@ -33,6 +33,7 @@ impl Chain {
         native_token_symbol: &str,
         native_token_address: &str,
         native_token_decimals: usize,
+        stables: Vec<Token>,
     ) -> Self {
         let properties = ChainProperties {
             rpc_urls: rpc_urls.iter().map(|u| Url::from_str(u).unwrap()).collect(),
@@ -43,6 +44,7 @@ impl Chain {
                 native_token_address,
                 native_token_decimals,
             ),
+            stables,
         };
         Self {
             chain_type,
