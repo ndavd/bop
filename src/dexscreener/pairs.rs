@@ -52,13 +52,40 @@ async fn get_pairs_request(url: Url) -> Option<Vec<Pair>> {
         .or(Some(Vec::new()))
 }
 
-pub async fn _get_pairs<F>(tokens: Vec<&str>, progress_handler: Option<F>) -> Option<Vec<Pair>>
+pub async fn _get_pairs<F>(
+    tokens: Vec<&str>,
+    stables: Vec<&str>,
+    progress_handler: Option<F>,
+) -> Option<Vec<Pair>>
 where
     F: Fn(),
 {
     let progress_handler = Arc::new(progress_handler);
+    let stables = stables.iter().map(|s| s.to_lowercase()).collect::<Vec<_>>();
     let pairs = stream::iter(tokens.clone())
         .map(async |t| {
+            if stables.contains(&t.to_lowercase()) {
+                return Vec::from([Pair {
+                    chain_id: String::new(),
+                    dex_id: String::new(),
+                    url: String::new(),
+                    pair_address: String::new(),
+                    base_token: Token {
+                        address: t.to_string(),
+                        name: String::new(),
+                        symbol: String::new(),
+                    },
+                    quote_token: Token {
+                        address: String::new(),
+                        name: String::new(),
+                        symbol: String::new(),
+                    },
+                    price_native: String::new(),
+                    price_usd: Some("1.0".to_string()),
+                    market_cap: None,
+                    liquidity: None,
+                }]);
+            }
             let url = Url::from_str(
                 format!("https://api.dexscreener.com/latest/dex/tokens/{t}").as_str(),
             )
@@ -105,14 +132,15 @@ where
 
 pub async fn get_pairs_with_progress<F>(
     tokens: Vec<&str>,
+    stables: Vec<&str>,
     progress_handler: Option<F>,
 ) -> Option<Vec<Pair>>
 where
     F: Fn(),
 {
-    _get_pairs(tokens, progress_handler).await
+    _get_pairs(tokens, stables, progress_handler).await
 }
 
-pub async fn get_pairs(tokens: Vec<&str>) -> Option<Vec<Pair>> {
-    _get_pairs::<fn()>(tokens, None).await
+pub async fn get_pairs(tokens: Vec<&str>, stables: Vec<&str>) -> Option<Vec<Pair>> {
+    _get_pairs::<fn()>(tokens, stables, None).await
 }
