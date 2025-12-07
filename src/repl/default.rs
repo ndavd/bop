@@ -1,9 +1,16 @@
 use crate::{
-    chain::{chain_type::ChainType, Chain},
+    chain::{chain_type::ChainType, token::Token, Chain},
     utils::spinner::Spinner,
 };
 
 use super::Repl;
+
+fn make_usdc(addr: &str) -> Token {
+    Token::hardcode("USDC", addr, 6)
+}
+fn make_usdt(addr: &str) -> Token {
+    Token::hardcode("USDT", addr, 6)
+}
 
 impl Default for Repl {
     fn default() -> Self {
@@ -19,6 +26,10 @@ impl Default for Repl {
             "SOL",
             "So11111111111111111111111111111111111111112",
             9,
+            Vec::from([
+                make_usdt("Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"),
+                make_usdc("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
+            ]),
         )]);
         let ton = Vec::from([Chain::new(
             ChainType::Ton,
@@ -27,6 +38,9 @@ impl Default for Repl {
             "TON",
             "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
             9,
+            Vec::from([make_usdt(
+                "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
+            )]),
         )]);
         let evm = Vec::from([
             Chain::new(
@@ -41,6 +55,10 @@ impl Default for Repl {
                 "ETH",
                 "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
                 18,
+                Vec::from([
+                    make_usdt("0xdac17f958d2ee523a2206206994597c13d831ec7"),
+                    make_usdc("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -54,6 +72,10 @@ impl Default for Repl {
                 "ETH",
                 "0x4200000000000000000000000000000000000006",
                 18,
+                Vec::from([
+                    make_usdt("0xfde4c96c8593536e31f229ea8f37b2ada2699bb2"),
+                    make_usdc("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -67,6 +89,10 @@ impl Default for Repl {
                 "BNB",
                 "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
                 18,
+                Vec::from([
+                    make_usdt("0x55d398326f99059ff775485246999027b3197955"),
+                    make_usdc("0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -80,6 +106,10 @@ impl Default for Repl {
                 "ETH",
                 "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
                 18,
+                Vec::from([
+                    make_usdt("0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"),
+                    make_usdc("0xaf88d065e77c8cC2239327C5EDb3A432268e5831"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -93,6 +123,10 @@ impl Default for Repl {
                 "AVAX",
                 "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
                 18,
+                Vec::from([
+                    make_usdt("0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7"),
+                    make_usdc("0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -106,6 +140,10 @@ impl Default for Repl {
                 "POL",
                 "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
                 18,
+                Vec::from([
+                    make_usdt("0xc2132d05d31c914a87c6611c10748aeb04b58e8f"),
+                    make_usdc("0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -119,6 +157,10 @@ impl Default for Repl {
                 "ETH",
                 "0x5AEa5775959fBC2557Cc8789bC1bf90A239D9a91",
                 18,
+                Vec::from([
+                    make_usdt("0x493257fD37EDB34451f62EDf8D2a0C418852bA4C"),
+                    make_usdc("0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -132,6 +174,10 @@ impl Default for Repl {
                 "CRO",
                 "0x5C7F8A570d578ED84E63fdFA7b1eE72dEae1AE23",
                 18,
+                Vec::from([
+                    make_usdt("0x66e428c3f67a68878562e79A0234c1F83c208770"),
+                    make_usdc("0xc21223249CA28397B4B6541dfFaEcC539BfF0c59"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -145,6 +191,7 @@ impl Default for Repl {
                 "FTM",
                 "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83",
                 18,
+                Vec::from([make_usdt("0x049d68029688eabf473097a2fc38ef61633a3c7a")]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -158,6 +205,10 @@ impl Default for Repl {
                 "ETH",
                 "0x4200000000000000000000000000000000000006",
                 18,
+                Vec::from([
+                    make_usdt("0x94b008aa00579c1307b0ef2c499ad98a8ce58e58"),
+                    make_usdc("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -171,6 +222,10 @@ impl Default for Repl {
                 "ETH",
                 "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f",
                 18,
+                Vec::from([
+                    make_usdt("0xa219439258ca9da29e9cc4ce5596924745e12b93"),
+                    make_usdc("0x176211869ca2b568f2a7d4ee941e073a821ee1ff"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -184,6 +239,10 @@ impl Default for Repl {
                 "MNT",
                 "0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE",
                 18,
+                Vec::from([
+                    make_usdt("0x201eba5cc46d216ce6dc03f6a759e8e766e956ae"),
+                    make_usdc("0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -197,6 +256,10 @@ impl Default for Repl {
                 "METIS",
                 "0x75cb093E4D61d2A2e65D8e0BBb01DE8d89b53481",
                 18,
+                Vec::from([
+                    make_usdt("0xbb06dca3ae6887fabf931640f67cab3e3a16f4dc"),
+                    make_usdc("0xea32a96608495e54156ae48931a7c20f0dcc1a21"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -210,6 +273,10 @@ impl Default for Repl {
                 "CORE",
                 "0x40375C92d9FAf44d2f9db9Bd9ba41a3317a2404f",
                 18,
+                Vec::from([
+                    make_usdt("0x900101d06A7426441Ae63e9AB3B9b0F63Be145F1"),
+                    make_usdc("0xa4151B2B3e269645181dCcF2D426cE75fcbDeca9"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -223,6 +290,10 @@ impl Default for Repl {
                 "ETH",
                 "0x5300000000000000000000000000000000000004",
                 18,
+                Vec::from([
+                    make_usdt("0xf55BEC9cafDbE8730f096Aa 55dad6D22d44099Df"),
+                    make_usdc("0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -236,6 +307,10 @@ impl Default for Repl {
                 "IOTX",
                 "0xA00744882684C3e4747faEFD68D283eA44099D03",
                 18,
+                Vec::from([
+                    make_usdt("0x6fbcdc1169b5130c59e72e51ed68a84841c98cd1"),
+                    make_usdc("0x3b2bf2b523f54c4e454f08aa286d03115aff326c"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -249,6 +324,10 @@ impl Default for Repl {
                 "CELO",
                 "0x471EcE3750Da237f93B8E339c536989b8978a438",
                 18,
+                Vec::from([
+                    make_usdt("0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e"),
+                    make_usdc("0xcebA9300f2b948710d2653dD7B07f33A8B32118C"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -261,6 +340,10 @@ impl Default for Repl {
                 "PLS",
                 "0xA1077a294dDE1B09bB078844df40758a5D0f9a27",
                 18,
+                Vec::from([
+                    make_usdt("0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f"),
+                    make_usdc("0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -274,6 +357,10 @@ impl Default for Repl {
                 "ETH",
                 "0x4F9A0e7FD2Bf6067db6994CF12E4495Df938E6e9",
                 18,
+                Vec::from([
+                    make_usdt("0x1e4a5963abfd975d8c9021ce480b42188849d41d"),
+                    make_usdc("0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035"),
+                ]),
             ),
             Chain::new(
                 ChainType::Evm,
@@ -287,6 +374,10 @@ impl Default for Repl {
                 "TLOS",
                 "0xB4B01216a5Bc8F1C8A33CD990A1239030E60C905",
                 18,
+                Vec::from([
+                    make_usdt("0x975Ed13fa16857E83e7C493C7741D556eaaD4A3f"),
+                    make_usdc("0x8D97Cea50351Fb4329d591682b148D43a0C3611b"),
+                ]),
             ),
         ]);
         Repl {
